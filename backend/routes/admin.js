@@ -113,18 +113,23 @@ router.get('/courses/:courseId/sections', async (req, res) => {
 // POST /api/admin/sections
 router.post('/sections', async (req, res) => {
   try {
-    const { course_id, title, section_order, is_locked } = req.body;
+    const { course_id, title, section_order, is_locked, category } = req.body;
 
-    if (!course_id || !title || section_order === undefined) {
-      return res.status(400).json({ error: 'course_id, title, and section_order are required.' });
+    if (!course_id || !title) {
+      return res.status(400).json({ error: 'course_id and title are required.' });
     }
+
+    // Auto-map category to order if not provided
+    const categoryOrderMap = { READING: 1, LISTENING: 2, WRITING: 3, SPEAKING: 4 };
+    const resolvedCategory = category ? category.toUpperCase() : null;
+    const resolvedOrder = section_order !== undefined ? section_order : (resolvedCategory ? categoryOrderMap[resolvedCategory] : 1);
 
     const id = uuidv4();
     const result = await pool.query(
-      `INSERT INTO Sections (id, course_id, title, section_order, is_locked)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO Sections (id, course_id, title, section_order, is_locked, category)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [id, course_id, title, section_order, is_locked !== undefined ? is_locked : true]
+      [id, course_id, title, resolvedOrder, is_locked !== undefined ? is_locked : true, resolvedCategory]
     );
 
     res.status(201).json({ message: 'Section created.', section: result.rows[0] });
@@ -138,16 +143,18 @@ router.post('/sections', async (req, res) => {
 router.put('/sections/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, section_order, is_locked } = req.body;
+    const { title, section_order, is_locked, category } = req.body;
+    const resolvedCategory = category ? category.toUpperCase() : undefined;
 
     const result = await pool.query(
       `UPDATE Sections SET
          title = COALESCE($1, title),
          section_order = COALESCE($2, section_order),
-         is_locked = COALESCE($3, is_locked)
-       WHERE id = $4
+         is_locked = COALESCE($3, is_locked),
+         category = COALESCE($4, category)
+       WHERE id = $5
        RETURNING *`,
-      [title, section_order, is_locked, id]
+      [title, section_order, is_locked, resolvedCategory || null, id]
     );
 
     if (result.rows.length === 0) {
@@ -947,6 +954,70 @@ router.put('/students/:id/role', async (req, res) => {
   } catch (err) {
     console.error('Admin toggle role error:', err);
     res.status(500).json({ error: 'Failed to update role.' });
+  }
+});
+
+// ======================================================================
+//  ANNOUNCEMENTS
+// ======================================================================
+
+// GET /api/admin/announcements
+router.get('/announcements', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM Announcements ORDER BY is_pinned DESC, created_at DESC');
+    res.json({ announcements: result.rows });
+  } catch (err) {
+    console.error('List announcements error:', err);
+    res.status(500).json({ error: 'Failed to retrieve announcements.' });
+  }
+});
+
+// POST /api/admin/announcements
+router.post('/announcements', async (req, res) => {
+  try {
+    const { title, body, is_pinned } = req.body;
+    if (!title || !body) return res.status(400).json({ error: 'title and body are required.' });
+    const id = uuidv4();
+    const result = await pool.query(
+      `INSERT INTO Announcements (id, title, body, is_pinned) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [id, title, body, is_pinned || false]
+    );
+    res.status(201).json({ announcement: result.rows[0] });
+  } catch (err) {
+    console.error('Create announcement error:', err);
+    res.status(500).json({ error: 'Failed to create announcement.' });
+  }
+});
+
+// PUT /api/admin/announcements/:id
+router.put('/announcements/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, body, is_pinned } = req.body;
+    const result = await pool.query(
+      `UPDATE Announcements SET
+         title = COALESCE($1, title),
+         body = COALESCE($2, body),
+         is_pinned = COALESCE($3, is_pinned)
+       WHERE id = $4 RETURNING *`,
+      [title, body, is_pinned, id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Announcement not found.' });
+    res.json({ announcement: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update announcement.' });
+  }
+});
+
+// DELETE /api/admin/announcements/:id
+router.delete('/announcements/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM Announcements WHERE id = $1 RETURNING id', [id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Announcement not found.' });
+    res.json({ message: 'Announcement deleted.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete announcement.' });
   }
 });
 

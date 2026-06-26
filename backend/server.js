@@ -58,6 +58,18 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Public announcements (students can read without admin access)
+const pool = require('./db/pool');
+app.get('/api/announcements', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM Announcements ORDER BY is_pinned DESC, created_at DESC LIMIT 20');
+    res.json({ announcements: result.rows });
+  } catch (err) {
+    console.error('Public announcements error:', err);
+    res.status(500).json({ error: 'Failed to retrieve announcements.' });
+  }
+});
+
 // ============================================
 // Health check
 // ============================================

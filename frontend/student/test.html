@@ -102,14 +102,18 @@
   <!-- Header -->
   <div class="test-header">
     <div class="section-info">
+      <a href="javascript:history.back()" class="btn btn-ghost btn-sm" style="margin-right:0.5rem">← Back</a>
       <span class="section-badge" id="section-badge">Reading</span>
       <span style="color:var(--text-muted);font-size:0.85rem" id="task-title">Task 1</span>
     </div>
     <div class="timer-display" id="timer-display">
       <span class="timer-icon">⏱</span>
-      <span id="timer-text">00:00</span>
+      <span id="timer-text">--:--</span>
     </div>
-    <button class="btn btn-ghost btn-sm" id="submit-section-btn">Submit Section →</button>
+    <div style="display:flex;gap:0.5rem;align-items:center;">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme" style="background:none;border:none;cursor:pointer;font-size:1.1rem;">🌙</button>
+      <button class="btn btn-ghost btn-sm" id="submit-section-btn">Submit →</button>
+    </div>
   </div>
 
   <!-- Body (dynamic) -->
@@ -146,13 +150,31 @@ if (!token || user.role !== 'STUDENT') {
   throw new Error('Redirecting...');
 }
 
-const params   = new URLSearchParams(window.location.search);
+const params    = new URLSearchParams(window.location.search);
 const attemptId = params.get('attemptId');
 const courseId  = params.get('courseId');
+const targetTaskId    = params.get('taskId');    // single-task mode
+const targetSectionId = params.get('sectionId'); // single-task mode
+const targetCategory  = (params.get('category') || '').toUpperCase();
+const examMode  = params.get('mode') === 'exam'; // full exam mode
+
 if (!attemptId || !courseId) { 
   window.location.href = 'dashboard.html'; 
   throw new Error('Redirecting...');
 }
+
+// ---- Theme ----
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+});
 
 let course      = null;
 let sections    = [];
@@ -165,7 +187,7 @@ let audioPlayed = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 
-const sectionColors = ['reading','listening','writing','speaking'];
+const CATEGORY_COLOR = { READING:'reading', LISTENING:'listening', WRITING:'writing', SPEAKING:'speaking' };
 
 // DOM refs
 const testBody        = document.getElementById('test-body');
@@ -186,7 +208,21 @@ async function init() {
   try {
     const data = await api.get(`/courses/${courseId}`);
     course   = data.course || data;
-    sections = data.sections || [];
+    let allSections = (data.course || data).sections || [];
+
+    if (targetTaskId && targetSectionId) {
+      // Single-task mode: filter to just the targeted section & task
+      const sec = allSections.find(s => s.id === targetSectionId);
+      if (sec) {
+        const task = (sec.tasks || []).find(t => t.id === targetTaskId);
+        sections = [{ ...sec, tasks: task ? [task] : sec.tasks }];
+      } else {
+        sections = allSections;
+      }
+    } else {
+      sections = allSections;
+    }
+
     renderSection();
   } catch(e) {
     showError('Failed to load test. Please try again.');
@@ -196,13 +232,18 @@ async function init() {
 function renderSection() {
   if (curSection >= sections.length) { finishTest(); return; }
   const sec = sections[curSection];
-  const color = sectionColors[curSection] || 'reading';
-  sectionBadge.textContent = sec.title;
+  const cat = (sec.category || targetCategory || '').toUpperCase();
+  const color = CATEGORY_COLOR[cat] || 'reading';
+  sectionBadge.textContent = cat ? `${catEmoji(cat)} ${sec.title}` : sec.title;
   sectionBadge.className   = `section-badge ${color}`;
   curQuestion = 0;
   stopTimer();
   answers[sec.id] = answers[sec.id] || {};
   renderQuestion();
+}
+
+function catEmoji(cat) {
+  return {READING:'📖',LISTENING:'🎧',WRITING:'✍️',SPEAKING:'🎤'}[cat] || '';
 }
 
 function renderQuestion() {
@@ -551,11 +592,35 @@ async function advanceSection() {
       submitBtn.textContent = 'Uploading...';
     }
 
-    for (const [qId, ans] of Object.entries(answersForSection)) {
-      if (ans && ans.type === 'audio' && ans.blob) {
+    const processedAnswers = {};
+    for (const [key, val] of Object.entries(answersForSection)) {
+      const lastUnderscore = key.lastIndexOf('_');
+      if (lastUnderscore !== -1 && !isNaN(key.substring(lastUnderscore + 1))) {
+        const qId = key.substring(0, lastUnderscore);
+        const blankIdx = parseInt(key.substring(lastUnderscore + 1));
+        if (!processedAnswers[qId]) {
+          processedAnswers[qId] = [];
+        }
+        processedAnswers[qId][blankIdx - 1] = val;
+      } else {
+        processedAnswers[key] = val;
+      }
+    }
+
+    for (const [qId, val] of Object.entries(processedAnswers)) {
+      let finalVal = val;
+      if (Array.isArray(val)) {
+        const arr = [];
+        for (let i = 0; i < val.length; i++) {
+          arr.push((val[i] || '').trim());
+        }
+        finalVal = arr.join(', ');
+      }
+
+      if (finalVal && finalVal.type === 'audio' && finalVal.blob) {
         try {
           const fd = new FormData();
-          fd.append('file', ans.blob, 'response.webm');
+          fd.append('file', finalVal.blob, 'response.webm');
           const uploadRes = await api.upload('/upload', fd);
           payload.push({
             question_id: qId,
@@ -568,7 +633,7 @@ async function advanceSection() {
       } else {
         payload.push({
           question_id: qId,
-          text_response: typeof ans === 'string' ? ans : JSON.stringify(ans),
+          text_response: typeof finalVal === 'string' ? finalVal : JSON.stringify(finalVal),
         });
       }
     }

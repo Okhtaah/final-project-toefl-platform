@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -8,11 +8,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../css/main.css"/>
   <link rel="stylesheet" href="../css/admin.css"/>
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
 </head>
 <body>
 <div class="admin-layout">
   <aside class="sidebar">
-    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <div class="sidebar-header">
+      <div class="sidebar-brand" style="border-bottom:none;padding:0;"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
     <nav class="sidebar-nav">
       <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
       <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
@@ -21,6 +30,7 @@
       <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
       <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
       <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+      <a href="announcements.html" class="nav-item"><span class="nav-icon">📢</span><span>Announcements</span></a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
@@ -91,6 +101,19 @@
 const token = localStorage.getItem('token');
 const user  = JSON.parse(localStorage.getItem('user') || '{}');
 if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+// ---- Theme ----
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+});
+
 
 let allCodes = [];
 let allCourses = [];

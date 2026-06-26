@@ -53,6 +53,7 @@ CREATE TABLE Sections (
     title VARCHAR(255) NOT NULL,
     section_order INT NOT NULL,
     is_locked BOOLEAN DEFAULT TRUE,
+    category VARCHAR(10) CHECK (category IN ('READING','LISTENING','WRITING','SPEAKING')),
     FOREIGN KEY (course_id) REFERENCES Courses(id) ON DELETE CASCADE
 );
 
@@ -223,3 +224,14 @@ VALUES (
     'Platform Admin',
     'ADMIN'
 ) ON CONFLICT (email) DO NOTHING;
+
+-- ============================================
+-- Announcements
+-- ============================================
+CREATE TABLE Announcements (
+    id VARCHAR(36) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    is_pinned BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

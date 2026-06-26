@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,6 +18,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
       </div>
       <nav class="sidebar-nav">
         <a href="dashboard.html" class="sidebar-nav-item">
@@ -118,11 +119,9 @@
       const name = document.getElementById('profileNameInput').value.trim();
       if (!name) return alert('Name is required.');
       const btn = document.getElementById('saveBtn');
-      btn.disabled = true;
-      btn.textContent = 'Saving...';
+      btn.disabled = true; btn.textContent = 'Saving...';
       try {
-        const res = await api.put('/auth/profile', { full_name: name });
-        // Update local session
+        await api.put('/auth/profile', { full_name: name });
         user.name = name;
         localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
         document.getElementById('profileName').textContent = name;
@@ -131,10 +130,23 @@
       } catch (err) {
         showToast(err.message || 'Failed to update profile.', 'error');
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'Save Changes';
+        btn.disabled = false; btn.textContent = 'Save Changes';
       }
     }
+
+    // Theme
+    (function() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+    })();
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+    });
   </script>
+  <a href="https://wa.me/+201234567890" target="_blank" class="fab-whatsapp" data-tooltip="Chat on WhatsApp">💬</a>
 </body>
 </html>

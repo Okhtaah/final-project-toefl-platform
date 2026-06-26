@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TOEFL Mastery — Login</title>
   <link rel="stylesheet" href="css/main.css" />
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
   <style>
     /* ---- Auth Page ---- */
     .auth-page {

@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard — TOEFL Mastery</title>
+  <meta name="description" content="Your personalized TOEFL preparation dashboard" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/student.css" />
 </head>
@@ -17,12 +20,13 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">🌙</button>
       </div>
       <nav class="sidebar-nav">
         <a href="dashboard.html" class="sidebar-nav-item active">
           <span class="nav-icon">📊</span> Dashboard
         </a>
-        <a href="#coursesSection" class="sidebar-nav-item" id="navCourses" onclick="scrollToSection('coursesSection')">
+        <a href="dashboard.html#coursesSection" class="sidebar-nav-item" onclick="setTimeout(()=>scrollToSection('coursesSection'),100)">
           <span class="nav-icon">📚</span> My Courses
         </a>
         <a href="materials.html" class="sidebar-nav-item">
@@ -47,6 +51,14 @@
         <h1 id="welcomeMsg">Welcome back! 👋</h1>
         <p>Continue your TOEFL preparation journey</p>
       </div>
+
+      <!-- Announcements -->
+      <section id="announcementsSection" class="animate-in" style="margin-bottom:2rem; display:none;">
+        <div class="page-header">
+          <h2>📢 Announcements</h2>
+        </div>
+        <div id="announcementsList"></div>
+      </section>
 
       <!-- Access Code -->
       <div class="access-code-section animate-in" id="accessCodeSection">
@@ -95,11 +107,11 @@
     </main>
   </div>
 
-  <!-- WhatsApp FAB outside page-wrapper at bottom-right -->
+  <!-- WhatsApp FAB -->
   <a href="https://wa.me/+201234567890" target="_blank" class="fab-whatsapp" data-tooltip="Chat on WhatsApp">💬</a>
 
   <!-- Toast container -->
-  <div class="toast-container" id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;"></div>
+  <div class="toast-container" id="toastContainer"></div>
 
   <script src="../js/config.js"></script>
   <script src="../js/api.js"></script>
@@ -109,9 +121,21 @@
     if (!auth.requireRole('student')) throw new Error('redirect');
 
     const user = auth.getUser();
-
-    // Welcome
     document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.name || 'Student'}! 👋`;
+
+    // ---- Theme Toggle ----
+    (function initTheme() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+    })();
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+    });
 
     // Sidebar mobile
     document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -129,30 +153,40 @@
       const t = document.createElement('div');
       t.className = 'toast ' + type;
       t.textContent = msg;
-      t.style.background = type === 'success' ? 'var(--success)' : 'var(--error)';
-      t.style.padding = '0.75rem 1.25rem';
-      t.style.borderRadius = '8px';
-      t.style.color = '#fff';
-      t.style.fontSize = '0.9rem';
-      t.style.fontWeight = '500';
+      t.style.cssText = `background:${type==='success'?'var(--success)':'var(--error)'};padding:0.75rem 1.25rem;border-radius:8px;color:#fff;font-size:0.9rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
       c.appendChild(t);
       setTimeout(() => t.remove(), 3000);
     }
 
-    // Section nav helpers
     function scrollToSection(id) {
       const target = document.getElementById(id);
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth' });
-      }
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
     }
 
     function focusAccessCode() {
       const input = document.getElementById('accessCodeInput');
-      if (input) {
-        input.scrollIntoView({ behavior: 'smooth' });
-        input.focus();
-      }
+      if (input) { input.scrollIntoView({ behavior: 'smooth' }); input.focus(); }
+    }
+
+    // ---- Load Announcements ----
+    async function loadAnnouncements() {
+      try {
+        const data = await api.get('/announcements');
+        const announcements = data.announcements || [];
+        if (!announcements.length) return;
+        const section = document.getElementById('announcementsSection');
+        const list = document.getElementById('announcementsList');
+        section.style.display = '';
+        list.innerHTML = announcements.map(a => `
+          <div class="card animate-in" style="margin-bottom:1rem;border-left:3px solid var(--accent);${a.is_pinned?'border-color:var(--warning);':''}">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              ${a.is_pinned ? '<span style="background:rgba(245,158,11,0.2);color:var(--warning);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:600;">📌 PINNED</span>' : ''}
+              <span style="font-weight:600;color:var(--text-primary)">${a.title}</span>
+              <span style="margin-left:auto;color:var(--text-muted);font-size:0.8rem">${new Date(a.created_at).toLocaleDateString()}</span>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6">${a.body}</p>
+          </div>`).join('');
+      } catch(e) { /* silently ignore */ }
     }
 
     // ---- Load Courses ----
@@ -168,18 +202,20 @@
         }
         courses.forEach((c, i) => {
           const isLocked = !c.is_free && !c.is_enrolled;
-          grid.innerHTML += `
-            <div class="card course-card ${isLocked ? 'locked' : ''} animate-in" style="animation-delay:${i * 0.1}s">
-              <div class="course-img">${getCourseLogo(c.title)}</div>
-              <div class="course-title">${c.title || 'Course'}</div>
-              <div class="course-desc">${c.description || 'No description.'}</div>
-              <div class="flex-between mt-md">
-                <span class="badge ${isLocked ? 'badge-neutral' : 'badge-success'}">${isLocked ? '🔒 Locked' : '✅ Enrolled'}</span>
-                ${!isLocked 
-                  ? `<button onclick="startPractice(event, '${c.id}')" class="btn btn-sm btn-primary">Start Practice</button>` 
-                  : `<button onclick="focusAccessCode()" class="btn btn-sm btn-secondary">Unlock</button>`}
-              </div>
+          const card = document.createElement('div');
+          card.className = `card course-card ${isLocked ? 'locked' : ''} animate-in`;
+          card.style.animationDelay = `${i * 0.1}s`;
+          card.innerHTML = `
+            <div class="course-img">${getCourseLogo(c.title)}</div>
+            <div class="course-title">${c.title || 'Course'}</div>
+            <div class="course-desc">${c.description || 'No description.'}</div>
+            <div class="flex-between mt-md">
+              <span class="badge ${isLocked ? 'badge-neutral' : 'badge-success'}">${isLocked ? '🔒 Locked' : '✅ Enrolled'}</span>
+              ${!isLocked
+                ? `<button onclick="openCourse('${c.id}')" class="btn btn-sm btn-primary">Open Course</button>`
+                : `<button onclick="focusAccessCode()" class="btn btn-sm btn-secondary">Unlock</button>`}
             </div>`;
+          grid.appendChild(card);
         });
       } catch (e) {
         console.error(e);
@@ -187,13 +223,17 @@
       }
     }
 
+    function openCourse(courseId) {
+      window.location.href = `course.html?courseId=${courseId}`;
+    }
+
     function getCourseLogo(title) {
       if (!title) return '📘';
       const t = title.toLowerCase();
       if (t.includes('reading')) return '📖';
       if (t.includes('listen'))  return '🎧';
-      if (t.includes('writ'))   return '✍️';
-      if (t.includes('speak'))  return '🎤';
+      if (t.includes('writ'))    return '✍️';
+      if (t.includes('speak'))   return '🎤';
       return '📘';
     }
 
@@ -214,21 +254,13 @@
           const date = new Date(a.start_time).toLocaleDateString();
           const score = a.total_score != null ? Math.round(a.total_score) : '—';
           const status = a.status === 'GRADED' ? 'graded' : (a.status === 'SUBMITTED' ? 'submitted' : 'in_progress');
-          
-          let badgeClass = 'badge-neutral';
-          let statusText = '⏳ In Progress';
-          if (status === 'graded') {
-            badgeClass = 'badge-success';
-            statusText = '✅ Graded';
-          } else if (status === 'submitted') {
-            badgeClass = 'badge-warning';
-            statusText = '⏳ Under Review';
-          }
-
+          let badgeClass = 'badge-neutral', statusText = '⏳ In Progress';
+          if (status === 'graded')    { badgeClass = 'badge-success'; statusText = '✅ Graded'; }
+          else if (status === 'submitted') { badgeClass = 'badge-warning'; statusText = '⏳ Under Review'; }
           list.innerHTML += `
             <div class="card flex-between animate-in" style="animation-delay:${i * 0.08}s;padding:var(--sp-lg);margin-bottom:12px;">
               <div>
-                <div class="heading-4" style="font-weight:600; font-size:1rem;">${a.course_title || 'TOEFL Practice Test'}</div>
+                <div class="heading-4" style="font-weight:600;font-size:1rem;">${a.course_title || 'TOEFL Practice Test'}</div>
                 <div class="body-sm text-muted" style="margin-top:2px;">${date}</div>
               </div>
               <div class="flex gap-md" style="align-items:center;">
@@ -242,30 +274,6 @@
         document.getElementById('attemptsList').innerHTML = '';
         document.getElementById('attemptsEmpty').classList.remove('hidden');
       }
-    // ---- Start Practice Attempt ----
-    async function startPractice(event, courseId) {
-      const btn = event.target;
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Starting...';
-      try {
-        let attemptId;
-        try {
-          const res = await api.post('/attempts/start', { course_id: courseId });
-          attemptId = res.attempt.id;
-        } catch (err) {
-          if (err.data && err.data.attempt_id) {
-            attemptId = err.data.attempt_id;
-          } else {
-            throw err;
-          }
-        }
-        window.location.href = `test.html?courseId=${courseId}&attemptId=${attemptId}`;
-      } catch (err) {
-        showToast(err.message || 'Failed to start practice test.', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }
     }
 
     // ---- Redeem Code ----
@@ -273,28 +281,29 @@
       const code = document.getElementById('accessCodeInput').value.trim();
       if (!code) return;
       const btn = document.getElementById('redeemBtn');
-      const alert = document.getElementById('codeAlert');
+      const alertEl = document.getElementById('codeAlert');
       btn.disabled = true;
-      alert.style.display = 'none';
+      alertEl.style.display = 'none';
       try {
         await api.post('/access-codes/redeem', { code });
-        alert.className = 'form-alert mt-sm alert-success';
-        alert.style.display = 'flex';
-        alert.textContent = '✅ Code redeemed successfully!';
+        alertEl.className = 'form-alert mt-sm alert-success';
+        alertEl.style.display = 'flex';
+        alertEl.textContent = '✅ Code redeemed successfully!';
         showToast('Access code redeemed!');
         document.getElementById('accessCodeInput').value = '';
         loadCourses();
         loadAttempts();
       } catch (e) {
-        alert.className = 'form-alert mt-sm alert-error';
-        alert.style.display = 'flex';
-        alert.textContent = '⚠️ ' + e.message;
+        alertEl.className = 'form-alert mt-sm alert-error';
+        alertEl.style.display = 'flex';
+        alertEl.textContent = '⚠️ ' + e.message;
       } finally {
         btn.disabled = false;
       }
     }
 
     // ---- Init ----
+    loadAnnouncements();
     loadCourses();
     loadAttempts();
   </script>

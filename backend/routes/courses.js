@@ -90,7 +90,7 @@ router.get('/:id', authenticate, async (req, res) => {
 
     // Get sections
     const sectionsResult = await pool.query(
-      'SELECT id, title, section_order, is_locked FROM Sections WHERE course_id = $1 ORDER BY section_order',
+      'SELECT id, title, section_order, is_locked, category FROM Sections WHERE course_id = $1 ORDER BY section_order',
       [id]
     );
 

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Announcements | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+  <style>
+    .announcement-card {
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .announcement-card:hover { border-color: var(--border-hover); }
+    .announcement-card.pinned { border-left: 3px solid var(--warning); }
+    .ann-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .ann-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); flex: 1; }
+    .ann-body { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; }
+    .ann-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; }
+    .ann-actions { position: absolute; top: 1rem; right: 1rem; display: flex; gap: 0.4rem; }
+    .compose-box { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 2rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; }
+    .admin-textarea { width:100%;min-height:120px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.75rem 1rem;color:var(--text-primary);font-family:'Outfit',sans-serif;font-size:0.95rem;line-height:1.6;resize:vertical; }
+    .admin-textarea:focus { outline:none;border-color:var(--accent); }
+    .pin-row { display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem; }
+    .pin-row label { font-size:0.875rem;color:var(--text-secondary);cursor:pointer; }
+  </style>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand" style="border-bottom:none;padding:0;"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="materials.html"    class="nav-item"><span class="nav-icon">📂</span><span>Materials</span></a>
+      <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+      <a href="announcements.html" class="nav-item active"><span class="nav-icon">📢</span><span>Announcements</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <h2 class="page-title">📢 Announcements</h2>
+        <p class="page-subtitle">Broadcast messages to all students.</p>
+      </div>
+    </div>
+
+    <!-- Compose -->
+    <div class="compose-box">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text-primary);">✏️ New Announcement</h3>
+      <div class="form-group">
+        <label for="ann-title-input">Title</label>
+        <input type="text" id="ann-title-input" class="form-input" placeholder="Announcement title..." style="width:100%;"/>
+      </div>
+      <div class="form-group">
+        <label for="ann-body-input">Message</label>
+        <textarea id="ann-body-input" class="admin-textarea" placeholder="Write your message to students..."></textarea>
+      </div>
+      <div class="pin-row">
+        <input type="checkbox" id="ann-pinned" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;"/>
+        <label for="ann-pinned">📌 Pin this announcement (shows at top)</label>
+      </div>
+      <button class="btn btn-primary" id="postBtn" onclick="postAnnouncement()">Post Announcement</button>
+      <span id="postStatus" style="margin-left:1rem;font-size:0.875rem;color:var(--text-muted);"></span>
+    </div>
+
+    <!-- List -->
+    <div class="section-card">
+      <h3 class="section-title">All Announcements</h3>
+      <div id="announcementsList"><div class="table-loading">Loading...</div></div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+// ---- Theme ----
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+});
+
+
+function logout() { auth.logout(); }
+
+let allAnnouncements = [];
+
+async function loadAnnouncements() {
+  const el = document.getElementById('announcementsList');
+  try {
+    const data = await api.get('/admin/announcements');
+    allAnnouncements = data.announcements || [];
+    renderAnnouncements();
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--error)">Failed to load announcements.</p>`;
+  }
+}
+
+function renderAnnouncements() {
+  const el = document.getElementById('announcementsList');
+  if (!allAnnouncements.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);padding:1rem 0">No announcements yet. Post one above!</p>';
+    return;
+  }
+  el.innerHTML = allAnnouncements.map(a => `
+    <div class="announcement-card ${a.is_pinned ? 'pinned' : ''}">
+      <div class="ann-actions">
+        <button class="btn btn-ghost btn-sm" onclick="deleteAnn('${a.id}')" title="Delete">🗑</button>
+      </div>
+      <div class="ann-header">
+        ${a.is_pinned ? '<span style="background:rgba(245,158,11,0.2);color:var(--warning);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.72rem;font-weight:700;">📌 PINNED</span>' : ''}
+        <span class="ann-title">${escapeHtml(a.title)}</span>
+      </div>
+      <div class="ann-body">${escapeHtml(a.body)}</div>
+      <div class="ann-meta">Posted ${new Date(a.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+async function postAnnouncement() {
+  const title = document.getElementById('ann-title-input').value.trim();
+  const body  = document.getElementById('ann-body-input').value.trim();
+  const is_pinned = document.getElementById('ann-pinned').checked;
+  const btn = document.getElementById('postBtn');
+  const status = document.getElementById('postStatus');
+
+  if (!title || !body) { status.textContent = '⚠️ Title and message are required.'; status.style.color='var(--error)'; return; }
+  btn.disabled = true; btn.textContent = 'Posting...';
+  try {
+    await api.post('/admin/announcements', { title, body, is_pinned });
+    document.getElementById('ann-title-input').value = '';
+    document.getElementById('ann-body-input').value = '';
+    document.getElementById('ann-pinned').checked = false;
+    status.textContent = '✅ Posted!'; status.style.color = 'var(--success)';
+    setTimeout(() => status.textContent = '', 3000);
+    loadAnnouncements();
+  } catch(e) {
+    status.textContent = '❌ ' + (e.message || 'Failed to post.'); status.style.color = 'var(--error)';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Post Announcement';
+  }
+}
+
+async function deleteAnn(id) {
+  if (!confirm('Delete this announcement?')) return;
+  try {
+    await api.delete(`/admin/announcements/${id}`);
+    loadAnnouncements();
+  } catch(e) { alert('Failed to delete: ' + e.message); }
+}
+
+loadAnnouncements();
+</script>
+</body>
+</html>

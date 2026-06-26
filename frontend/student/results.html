@@ -57,7 +57,10 @@
 
   <div class="back-bar">
     <a href="dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
-    <span class="status-tag" id="attempt-status">Loading...</span>
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme" style="background:none;border:none;cursor:pointer;font-size:1.1rem;">🌙</button>
+      <span class="status-tag" id="attempt-status">Loading...</span>
+    </div>
   </div>
 
   <div class="results-header">
@@ -107,6 +110,20 @@
 const token = localStorage.getItem('token');
 const user  = JSON.parse(localStorage.getItem('user') || '{}');
 if (!token || user.role !== 'STUDENT') window.location.href = '../index.html';
+
+// ---- Theme ----
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+});
+
 
 const params    = new URLSearchParams(window.location.search);
 const attemptId = params.get('attemptId');

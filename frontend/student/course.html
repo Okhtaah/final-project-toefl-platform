@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Course — TOEFL Mastery</title>
+  <meta name="description" content="Browse sections and tasks for your TOEFL course"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/student.css"/>
+  <style>
+    .course-hero {
+      background: var(--gradient);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .course-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 300px; height: 300px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 50%;
+    }
+    .course-hero h1 { font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; }
+    .course-hero p  { color: rgba(255,255,255,0.8); font-size: 0.95rem; }
+
+    .section-type-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.35rem 0.85rem; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+    .type-reading   { background: rgba(99,102,241,0.2);  color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+    .type-listening { background: rgba(16,185,129,0.2);  color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .type-writing   { background: rgba(245,158,11,0.2);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .type-speaking  { background: rgba(239,68,68,0.2);   color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+    .section-panel {
+      background: var(--glass-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .section-header {
+      padding: 1.25rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .section-header:hover { background: rgba(255,255,255,0.03); }
+    .section-header-left { display: flex; flex-direction: column; gap: 0.25rem; }
+    .section-title { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+    .section-meta  { font-size: 0.8rem; color: var(--text-muted); }
+    .section-chevron { color: var(--text-muted); font-size: 1.2rem; transition: transform 0.2s; }
+    .section-chevron.open { transform: rotate(90deg); }
+    .section-body { display: none; padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--border); }
+    .section-body.open { display: block; }
+
+    .task-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-top: 0.75rem;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem;
+      transition: all 0.2s;
+    }
+    .task-card:hover { border-color: var(--accent); transform: translateX(4px); }
+    .task-left { display: flex; align-items: center; gap: 0.85rem; }
+    .task-icon { font-size: 1.5rem; }
+    .task-name { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); }
+    .task-type-tag {
+      display: inline-block; padding: 0.2rem 0.5rem;
+      background: rgba(99,102,241,0.15); color: var(--text-accent);
+      border-radius: 4px; font-size: 0.72rem; font-weight: 600; margin-top: 0.2rem;
+    }
+    .task-time { font-size: 0.8rem; color: var(--text-muted); }
+
+    .empty-section {
+      text-align: center; padding: 2rem;
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+
+    .exam-card {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1));
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .exam-card h3 { font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .exam-card p { color: var(--text-muted); font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <button class="sidebar-toggle" id="sidebarToggle"><span></span></button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="dashboard.html#coursesSection" class="sidebar-nav-item active"><span class="nav-icon">📚</span> My Courses</a>
+      <a href="materials.html" class="sidebar-nav-item"><span class="nav-icon">📂</span> Study Materials</a>
+      <a href="messages.html" class="sidebar-nav-item"><span class="nav-icon">💬</span> Messages</a>
+      <a href="profile.html" class="sidebar-nav-item"><span class="nav-icon">👤</span> Profile</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-block" onclick="auth.logout()">🚪 Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <!-- Back -->
+    <div style="margin-bottom:1.5rem;">
+      <a href="dashboard.html" class="btn btn-ghost btn-sm">← Back to Dashboard</a>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loadingState">
+      <div class="card skeleton" style="height:120px;margin-bottom:2rem;"></div>
+      <div class="card skeleton" style="height:80px;margin-bottom:1rem;"></div>
+      <div class="card skeleton" style="height:80px;margin-bottom:1rem;"></div>
+    </div>
+
+    <!-- Course Content -->
+    <div id="courseContent" style="display:none;">
+      <!-- Hero -->
+      <div class="course-hero animate-in" id="courseHero">
+        <h1 id="courseTitle">Loading...</h1>
+        <p id="courseDesc"></p>
+      </div>
+
+      <!-- Full Exam CTA -->
+      <div class="exam-card animate-in" id="examCard" style="display:none;">
+        <div>
+          <h3>🎯 Full Practice Exam</h3>
+          <p>Take all sections sequentially — just like the real TOEFL test.</p>
+        </div>
+        <button class="btn btn-primary" id="startExamBtn" onclick="startFullExam()">Start Full Exam →</button>
+      </div>
+
+      <!-- Sections -->
+      <div class="page-header animate-in">
+        <h2>📖 Practice by Section</h2>
+        <p>Choose a section and task to practice</p>
+      </div>
+      <div id="sectionsContainer"></div>
+    </div>
+
+    <div id="errorState" style="display:none;">
+      <div class="card" style="text-align:center;padding:3rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+        <h3 style="color:var(--text-primary);margin-bottom:0.5rem;">Course Not Available</h3>
+        <p style="color:var(--text-muted);margin-bottom:1.5rem;" id="errorMsg">You don't have access to this course.</p>
+        <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- WhatsApp FAB -->
+<a href="https://wa.me/+201234567890" target="_blank" class="fab-whatsapp" data-tooltip="Chat on WhatsApp">💬</a>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+if (!auth.requireRole('student')) throw new Error('redirect');
+
+const params = new URLSearchParams(window.location.search);
+const courseId = params.get('courseId');
+if (!courseId) { window.location.href = 'dashboard.html'; throw new Error('no courseId'); }
+
+// ---- Theme ----
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+});
+
+// Sidebar
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+});
+document.getElementById('sidebarOverlay').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+});
+
+const SECTION_INFO = {
+  READING:   { label: '📖 Reading',   cls: 'type-reading'  },
+  LISTENING: { label: '🎧 Listening', cls: 'type-listening' },
+  WRITING:   { label: '✍️ Writing',   cls: 'type-writing'  },
+  SPEAKING:  { label: '🎤 Speaking',  cls: 'type-speaking'  },
+};
+
+const TASK_ICONS = {
+  ACADEMIC_PASSAGE:  '📄',
+  MCQ:               '🔘',
+  COMPLETE_WORDS:    '🔤',
+  BUILD_SENTENCE:    '🧩',
+  SHORT_LISTENING:   '🎵',
+  CONVERSATION:      '🗣️',
+  WRITE_EMAIL:       '📧',
+  ACADEMIC_DISCUSSION:'💬',
+  REPEAT:            '🔁',
+  INTERVIEW:         '🎙️',
+};
+
+function formatTaskType(t) {
+  return t.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function formatTime(seconds) {
+  if (!seconds) return null;
+  const m = Math.floor(seconds / 60), s = seconds % 60;
+  return `${m}:${String(s).padStart(2,'0')} min`;
+}
+
+let courseData = null;
+
+async function loadCourse() {
+  try {
+    const data = await api.get(`/courses/${courseId}`);
+    courseData = data.course || data;
+    renderCourse(courseData);
+  } catch(e) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = '';
+    document.getElementById('errorMsg').textContent = e.message || 'Failed to load course.';
+  }
+}
+
+function renderCourse(course) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('courseContent').style.display = '';
+  document.title = `${course.title} — TOEFL Mastery`;
+  document.getElementById('courseTitle').textContent = course.title;
+  document.getElementById('courseDesc').textContent = course.description || '';
+
+  const sections = course.sections || [];
+  const hasContent = sections.some(s => (s.tasks || []).length > 0);
+  if (hasContent) document.getElementById('examCard').style.display = '';
+
+  const container = document.getElementById('sectionsContainer');
+  if (!sections.length) {
+    container.innerHTML = '<div class="empty-section">No sections available yet for this course.</div>';
+    return;
+  }
+
+  sections.forEach((section, idx) => {
+    const cat = (section.category || '').toUpperCase();
+    const info = SECTION_INFO[cat] || { label: section.title, cls: 'type-reading' };
+    const tasks = section.tasks || [];
+    const taskCount = tasks.length;
+    const totalQ = tasks.reduce((acc, t) => acc + (t.questions || []).length, 0);
+
+    const panel = document.createElement('div');
+    panel.className = 'section-panel animate-in';
+    panel.style.animationDelay = `${idx * 0.07}s`;
+    panel.innerHTML = `
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="section-header-left">
+          <span class="section-type-badge ${info.cls}">${info.label}</span>
+          <span class="section-title">${section.title}</span>
+          <span class="section-meta">${taskCount} task${taskCount !== 1 ? 's' : ''} · ${totalQ} question${totalQ !== 1 ? 's' : ''}</span>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        ${taskCount === 0
+          ? '<div class="empty-section">No tasks in this section yet.</div>'
+          : tasks.map(task => `
+            <div class="task-card">
+              <div class="task-left">
+                <span class="task-icon">${TASK_ICONS[task.task_type] || '📝'}</span>
+                <div>
+                  <div class="task-name">${task.title}</div>
+                  <span class="task-type-tag">${formatTaskType(task.task_type)}</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:1rem;">
+                ${task.time_limit_seconds ? `<span class="task-time">⏱ ${formatTime(task.time_limit_seconds)}</span>` : ''}
+                <button class="btn btn-sm btn-primary" onclick="startTask('${section.id}','${task.id}','${cat}')">Start</button>
+              </div>
+            </div>`).join('')}
+      </div>`;
+    container.appendChild(panel);
+  });
+}
+
+function toggleSection(header) {
+  const chevron = header.querySelector('.section-chevron');
+  const body = header.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.section-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.section-chevron').forEach(c => c.classList.remove('open'));
+  // Open this one if it was closed
+  if (!isOpen) {
+    body.classList.add('open');
+    chevron.classList.add('open');
+  }
+}
+
+async function startTask(sectionId, taskId, category) {
+  try {
+    let attemptId;
+    try {
+      const res = await api.post('/attempts/start', { course_id: courseId });
+      attemptId = res.attempt.id;
+    } catch(err) {
+      if (err.data && err.data.attempt_id) attemptId = err.data.attempt_id;
+      else throw err;
+    }
+    window.location.href = `test.html?courseId=${courseId}&attemptId=${attemptId}&taskId=${taskId}&sectionId=${sectionId}&category=${category}`;
+  } catch(e) {
+    alert('Failed to start task: ' + (e.message || 'Unknown error'));
+  }
+}
+
+async function startFullExam() {
+  const btn = document.getElementById('startExamBtn');
+  btn.disabled = true; btn.textContent = 'Starting...';
+  try {
+    let attemptId;
+    try {
+      const res = await api.post('/attempts/start', { course_id: courseId });
+      attemptId = res.attempt.id;
+    } catch(err) {
+      if (err.data && err.data.attempt_id) attemptId = err.data.attempt_id;
+      else throw err;
+    }
+    window.location.href = `test.html?courseId=${courseId}&attemptId=${attemptId}&mode=exam`;
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Start Full Exam →';
+    alert('Failed to start exam: ' + (e.message || 'Unknown error'));
+  }
+}
+
+loadCourse();
+</script>
+</body>
+</html>

@@ -170,28 +170,12 @@ router.post('/:id/submit', authenticate, async (req, res) => {
       });
     }
 
-    // Calculate total score from auto-scored questions
-    const calculatedScore = autoScoredCount > 0
-      ? (totalAutoScore / autoScoredCount) * 100
-      : null;
-
-    // Determine status — if all questions were auto-scored, set to GRADED; otherwise SUBMITTED
-    const hasManualQuestions = submissions.some(s => s.review_status === 'PENDING_REVIEW');
-    const newStatus = hasManualQuestions ? 'SUBMITTED' : 'GRADED';
-
-    await client.query(
-      `UPDATE TestAttempts SET status = $1, end_time = CURRENT_TIMESTAMP, total_score = $2 WHERE id = $3`,
-      [newStatus, calculatedScore, id]
-    );
-
     await client.query('COMMIT');
 
     res.json({
-      message: 'Attempt submitted successfully.',
+      message: 'Answers submitted successfully.',
       attempt: {
         id,
-        status: newStatus,
-        total_score: calculatedScore,
         submissions_count: submissions.length,
         auto_scored_count: autoScoredCount
       }
@@ -204,6 +188,83 @@ router.post('/:id/submit', authenticate, async (req, res) => {
     client.release();
   }
 });
+
+// ============================================
+// POST /api/attempts/:id/finish — Finish test attempt
+// ============================================
+router.post('/:id/finish', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Verify attempt belongs to user
+    const attemptResult = await client.query(
+      `SELECT * FROM TestAttempts WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+
+    if (attemptResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Attempt not found.' });
+    }
+
+    const attempt = attemptResult.rows[0];
+    if (attempt.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'This attempt has already been finished.' });
+    }
+
+    await client.query('BEGIN');
+
+    // Get all submissions for this attempt to calculate overall score
+    const subsResult = await client.query(
+      `SELECT auto_score, review_status FROM Submissions WHERE attempt_id = $1`,
+      [id]
+    );
+
+    const submissions = subsResult.rows;
+    let totalAutoScore = 0;
+    let autoScoredCount = 0;
+
+    for (const sub of submissions) {
+      if (sub.auto_score !== null) {
+        totalAutoScore += parseFloat(sub.auto_score);
+        autoScoredCount++;
+      }
+    }
+
+    const overallScore = autoScoredCount > 0
+      ? (totalAutoScore / autoScoredCount) * 100
+      : null;
+
+    const hasManualQuestions = submissions.some(s => s.review_status === 'PENDING_REVIEW');
+    const finalStatus = hasManualQuestions ? 'SUBMITTED' : 'GRADED';
+
+    await client.query(
+      `UPDATE TestAttempts
+       SET status = $1, end_time = CURRENT_TIMESTAMP, total_score = $2
+       WHERE id = $3`,
+      [finalStatus, overallScore, id]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      message: 'Attempt finished successfully.',
+      attempt: {
+        id,
+        status: finalStatus,
+        total_score: overallScore
+      }
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Finish attempt error:', err);
+    res.status(500).json({ error: 'Failed to finish test attempt.' });
+  } finally {
+    client.release();
+  }
+});
+
 
 // ============================================
 // GET /api/attempts/my — List current user's attempts
