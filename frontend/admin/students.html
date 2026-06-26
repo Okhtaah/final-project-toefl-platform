@@ -60,15 +60,19 @@ function renderStudents(students) {
   const el = document.getElementById('students-table');
   if (!students.length) { el.innerHTML = '<p style="color:var(--text-muted)">No students registered yet.</p>'; return; }
   el.innerHTML = `<table class="data-table">
-    <thead><tr><th>Student</th><th>Email</th><th>Joined</th><th>Tests Taken</th><th>Avg Score</th><th>Actions</th></tr></thead>
+    <thead><tr><th>Student</th><th>Email</th><th>Role</th><th>Joined</th><th>Tests Taken</th><th>Avg Score</th><th>Actions</th></tr></thead>
     <tbody>
     ${students.map(s => `<tr>
       <td><div style="display:flex;align-items:center;gap:0.6rem"><div style="width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.85rem;flex-shrink:0">${s.full_name[0].toUpperCase()}</div>${s.full_name}</div></td>
       <td style="color:var(--text-muted)">${s.email}</td>
+      <td><span class="badge ${s.role === 'ADMIN' ? 'badge-warning' : 'badge-info'}">${s.role}</span></td>
       <td style="color:var(--text-muted)">${new Date(s.created_at).toLocaleDateString()}</td>
       <td>${s.total_attempts || 0}</td>
       <td>${s.average_score != null ? Math.round(s.average_score) + '%' : '—'}</td>
-      <td><div style="display:flex;gap:0.4rem"><a href="messages.html" class="btn btn-ghost btn-sm">Message</a></div></td>
+      <td><div style="display:flex;gap:0.4rem">
+        <button class="btn btn-ghost btn-sm" onclick="toggleRole('${s.id}','${s.role}')" title="${s.role === 'ADMIN' ? 'Demote to Student' : 'Promote to Admin'}">${s.role === 'ADMIN' ? '⬇️ Demote' : '⬆️ Promote'}</button>
+        <a href="messages.html" class="btn btn-ghost btn-sm">Message</a>
+      </div></td>
     </tr>`).join('')}
     </tbody></table>`;
 }
@@ -78,7 +82,18 @@ function filterStudents() {
   renderStudents(allStudents.filter(s => s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)));
 }
 
+async function toggleRole(id, currentRole) {
+  const newRole = currentRole === 'ADMIN' ? 'STUDENT' : 'ADMIN';
+  const action = newRole === 'ADMIN' ? 'promote this user to Admin' : 'demote this user to Student';
+  if (!confirm(`Are you sure you want to ${action}?`)) return;
+  try {
+    await api.put(`/admin/students/${id}/role`, { role: newRole });
+    loadStudents();
+  } catch(e) { alert('Failed to update role: ' + (e.message || '')); }
+}
+
 loadStudents();
 </script>
 </body>
 </html>
+

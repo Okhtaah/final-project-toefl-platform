@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
 
@@ -8,9 +9,46 @@ const { authenticate } = require('../middleware/auth');
 // ============================================
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id, title, description, is_published FROM Courses WHERE is_published = true ORDER BY title'
-    );
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.id;
+      } catch (err) {
+        // Soft auth: ignore invalid tokens for listing courses
+      }
+    }
+
+    let query;
+    let params = [];
+    if (userId) {
+      query = `
+        SELECT c.id, c.title, c.description, c.is_published, c.is_free,
+               CASE
+                 WHEN c.is_free = true THEN true
+                 WHEN ua.id IS NOT NULL THEN true
+                 ELSE false
+               END AS is_enrolled
+        FROM Courses c
+        LEFT JOIN UserAccess ua ON ua.target_type = 'COURSE'
+          AND ua.target_id = c.id AND ua.user_id = $1
+        WHERE c.is_published = true
+        ORDER BY c.title
+      `;
+      params = [userId];
+    } else {
+      query = `
+        SELECT id, title, description, is_published, is_free,
+               is_free AS is_enrolled
+        FROM Courses
+        WHERE is_published = true
+        ORDER BY title
+      `;
+    }
+
+    const result = await pool.query(query, params);
     res.json({ courses: result.rows });
   } catch (err) {
     console.error('List courses error:', err);
@@ -19,15 +57,17 @@ router.get('/', async (req, res) => {
 });
 
 // ============================================
-// GET /api/courses/:id — Get course with sections & tasks
+// GET /api/courses/:id — Get course with sections & tasks (authenticated)
 // ============================================
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
     // Get course
     const courseResult = await pool.query(
-      'SELECT id, title, description, is_published FROM Courses WHERE id = $1',
+      'SELECT id, title, description, is_published, is_free FROM Courses WHERE id = $1',
       [id]
     );
 
@@ -36,6 +76,17 @@ router.get('/:id', async (req, res) => {
     }
 
     const course = courseResult.rows[0];
+
+    // Access check: only allow if admin, or course is free, or user has access
+    if (userRole !== 'ADMIN' && !course.is_free) {
+      const accessResult = await pool.query(
+        "SELECT id FROM UserAccess WHERE user_id = $1 AND target_type = 'COURSE' AND target_id = $2",
+        [userId, id]
+      );
+      if (accessResult.rows.length === 0) {
+        return res.status(403).json({ error: 'This course is premium. Please unlock it using an access code.' });
+      }
+    }
 
     // Get sections
     const sectionsResult = await pool.query(

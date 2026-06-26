@@ -783,4 +783,171 @@ router.get('/attempts', async (req, res) => {
   }
 });
 
+// ======================================================================
+//  STATS — Dashboard statistics
+// ======================================================================
+
+// GET /api/admin/stats
+router.get('/stats', async (req, res) => {
+  try {
+    const studentsResult = await pool.query(
+      "SELECT COUNT(*) AS count FROM Users WHERE role = 'STUDENT'"
+    );
+    const coursesResult = await pool.query(
+      "SELECT COUNT(*) AS count FROM Courses WHERE is_published = true"
+    );
+    const pendingResult = await pool.query(
+      "SELECT COUNT(*) AS count FROM Submissions WHERE review_status = 'PENDING_REVIEW'"
+    );
+    const messagesResult = await pool.query(
+      `SELECT COUNT(*) AS count FROM Messages
+       WHERE receiver_id = $1 AND is_read = false`,
+      [req.user.id]
+    );
+
+    res.json({
+      totalStudents: parseInt(studentsResult.rows[0].count),
+      activeCourses: parseInt(coursesResult.rows[0].count),
+      pendingReviews: parseInt(pendingResult.rows[0].count),
+      unreadMessages: parseInt(messagesResult.rows[0].count)
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err);
+    res.status(500).json({ error: 'Failed to retrieve stats.' });
+  }
+});
+
+// ======================================================================
+//  MESSAGES — Admin messaging with students
+// ======================================================================
+
+// GET /api/admin/messages/students — List students who have conversations
+router.get('/messages/students', async (req, res) => {
+  try {
+    const adminId = req.user.id;
+
+    // Get all students (not just ones with existing messages)
+    const result = await pool.query(
+      `SELECT u.id, u.full_name, u.email,
+              (SELECT content FROM Messages
+               WHERE (sender_id = u.id AND receiver_id = $1)
+                  OR (sender_id = $1 AND receiver_id = u.id)
+               ORDER BY created_at DESC LIMIT 1) AS last_message,
+              (SELECT COUNT(*) FROM Messages
+               WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false)::int AS unread_count,
+              (SELECT MAX(created_at) FROM Messages
+               WHERE (sender_id = u.id AND receiver_id = $1)
+                  OR (sender_id = $1 AND receiver_id = u.id)) AS last_message_at
+       FROM Users u
+       WHERE u.role = 'STUDENT'
+       ORDER BY last_message_at DESC NULLS LAST, u.full_name ASC`,
+      [adminId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Admin list message students error:', err);
+    res.status(500).json({ error: 'Failed to load student conversations.' });
+  }
+});
+
+// GET /api/admin/messages/:studentId — Get messages between admin and student
+router.get('/messages/:studentId', async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { studentId } = req.params;
+
+    // Mark messages from this student as read
+    await pool.query(
+      `UPDATE Messages SET is_read = true
+       WHERE sender_id = $1 AND receiver_id = $2 AND is_read = false`,
+      [studentId, adminId]
+    );
+
+    const result = await pool.query(
+      `SELECT id, sender_id, receiver_id, content, created_at, is_read
+       FROM Messages
+       WHERE (sender_id = $1 AND receiver_id = $2)
+          OR (sender_id = $2 AND receiver_id = $1)
+       ORDER BY created_at ASC`,
+      [adminId, studentId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Admin get messages error:', err);
+    res.status(500).json({ error: 'Failed to retrieve messages.' });
+  }
+});
+
+// POST /api/admin/messages/:studentId — Admin sends message to student
+router.post('/messages/:studentId', async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { studentId } = req.params;
+    const { content } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ error: 'Message content is required.' });
+    }
+
+    // Verify student exists
+    const studentResult = await pool.query(
+      "SELECT id FROM Users WHERE id = $1 AND role = 'STUDENT'",
+      [studentId]
+    );
+    if (studentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Student not found.' });
+    }
+
+    const id = uuidv4();
+    const result = await pool.query(
+      `INSERT INTO Messages (id, sender_id, receiver_id, content)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, sender_id, receiver_id, content, created_at, is_read`,
+      [id, adminId, studentId, content]
+    );
+
+    res.status(201).json({ message: 'Message sent.', data: result.rows[0] });
+  } catch (err) {
+    console.error('Admin send message error:', err);
+    res.status(500).json({ error: 'Failed to send message.' });
+  }
+});
+
+// ======================================================================
+//  ROLE TOGGLE — Promote/demote students
+// ======================================================================
+
+// PUT /api/admin/students/:id/role — Toggle user role
+router.put('/students/:id/role', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role || !['STUDENT', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'role must be STUDENT or ADMIN.' });
+    }
+
+    // Prevent demoting yourself
+    if (id === req.user.id) {
+      return res.status(400).json({ error: 'You cannot change your own role.' });
+    }
+
+    const result = await pool.query(
+      'UPDATE Users SET role = $1 WHERE id = $2 RETURNING id, email, full_name, role',
+      [role, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.json({ message: 'Role updated.', user: result.rows[0] });
+  } catch (err) {
+    console.error('Admin toggle role error:', err);
+    res.status(500).json({ error: 'Failed to update role.' });
+  }
+});
+
 module.exports = router;

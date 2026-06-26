@@ -4,6 +4,16 @@ const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
+// Helper to generate random code
+function generateCode(length = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 // ============================================
 // POST /api/access-codes/redeem — Student redeems a code
 // ============================================
@@ -98,7 +108,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
       `SELECT id, code, target_type, target_id, max_uses, current_uses, expires_at, created_at
        FROM AccessCodes ORDER BY created_at DESC`
     );
-    res.json({ access_codes: result.rows });
+    res.json({ codes: result.rows });
   } catch (err) {
     console.error('List access codes error:', err);
     res.status(500).json({ error: 'Failed to retrieve access codes.' });
@@ -110,10 +120,10 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 // ============================================
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { code, target_type, target_id, max_uses, expires_at } = req.body;
+    const { target_type, target_id, max_uses, expires_at } = req.body;
 
-    if (!code || !target_type || !target_id) {
-      return res.status(400).json({ error: 'code, target_type, and target_id are required.' });
+    if (!target_type || !target_id) {
+      return res.status(400).json({ error: 'target_type and target_id are required.' });
     }
 
     const validTypes = ['COURSE', 'SECTION', 'TASK', 'MATERIAL'];
@@ -121,10 +131,13 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: `target_type must be one of: ${validTypes.join(', ')}` });
     }
 
-    // Check code uniqueness
-    const existing = await pool.query('SELECT id FROM AccessCodes WHERE code = $1', [code]);
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'An access code with this value already exists.' });
+    // Auto-generate a unique code
+    let code;
+    let isUnique = false;
+    while (!isUnique) {
+      code = generateCode();
+      const existing = await pool.query('SELECT id FROM AccessCodes WHERE code = $1', [code]);
+      if (existing.rows.length === 0) isUnique = true;
     }
 
     const id = uuidv4();
@@ -144,4 +157,24 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// ============================================
+// DELETE /api/access-codes/:id — Admin delete a code
+// ============================================
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM AccessCodes WHERE id = $1 RETURNING id', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Access code not found.' });
+    }
+
+    res.json({ message: 'Access code deleted.' });
+  } catch (err) {
+    console.error('Delete access code error:', err);
+    res.status(500).json({ error: 'Failed to delete access code.' });
+  }
+});
+
 module.exports = router;
+

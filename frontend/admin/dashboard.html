@@ -43,7 +43,7 @@
     <div class="admin-topbar">
       <div>
         <h2 class="page-title">Dashboard</h2>
-        <p class="page-subtitle">Welcome back! Here's what's happening.</p>
+        <p class="page-subtitle" id="welcome-subtitle">Welcome back! Here's what's happening.</p>
       </div>
     </div>
 
@@ -99,6 +99,7 @@ if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
 
 document.getElementById('user-name').textContent   = user.full_name || 'Admin';
 document.getElementById('user-avatar').textContent = (user.full_name || 'A')[0].toUpperCase();
+document.getElementById('welcome-subtitle').textContent = `Welcome back, ${user.full_name || 'Admin'}! Here's what's happening.`;
 
 async function loadStats() {
   try {

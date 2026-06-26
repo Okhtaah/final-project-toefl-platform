@@ -10,7 +10,36 @@
   <link rel="stylesheet" href="../css/admin.css"/>
   <style>
     .messages-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; height: calc(100vh - 120px); }
-    .students-sidebar { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+    .students-sidebar { background: var(--bg-glass); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+    .sidebar-search-box {
+      padding: var(--sp-md);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 12px;
+      right: 12px;
+      background: #11111e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      z-index: 10;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .search-result-item {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.15s;
+      color: var(--text-primary);
+    }
+    .search-result-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
     .students-sidebar-header { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
     .student-thread { padding: 0.85rem 1rem; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04); }
     .student-thread:hover { background: rgba(255,255,255,0.04); }
@@ -18,7 +47,7 @@
     .thread-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; }
     .thread-preview { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .unread-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
-    .chat-area { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-area { background: var(--bg-glass); border: 1px solid var(--border); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
     .chat-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
     .chat-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--gradient); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 1rem; flex-shrink: 0; }
     .chat-messages { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
@@ -59,6 +88,10 @@
     <div class="messages-layout">
       <!-- Students List -->
       <div class="students-sidebar">
+        <div class="sidebar-search-box">
+          <input type="text" id="user-search-input" class="form-input" placeholder="Search user by email or name..." autocomplete="off" />
+          <div id="search-results-list" class="search-results" style="display:none"></div>
+        </div>
         <div class="students-sidebar-header">Student Conversations</div>
         <div style="flex:1;overflow-y:auto" id="students-list">
           <div style="padding:1rem;color:var(--text-muted);font-size:0.85rem">Loading...</div>
@@ -86,6 +119,51 @@ if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
 
 let currentStudent = null;
 let pollInterval   = null;
+
+// Search user input event
+const searchInput = document.getElementById('user-search-input');
+const resultsList = document.getElementById('search-results-list');
+
+let searchTimeout = null;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  const query = searchInput.value.trim();
+  if (!query) {
+    resultsList.style.display = 'none';
+    return;
+  }
+  searchTimeout = setTimeout(async () => {
+    try {
+      const res = await api.get(`/messages/search?query=${encodeURIComponent(query)}`);
+      const users = res.users || [];
+      if (users.length === 0) {
+        resultsList.innerHTML = '<div class="search-result-item" style="color:var(--text-muted)">No users found</div>';
+      } else {
+        resultsList.innerHTML = users.map(u => `
+          <div class="search-result-item" onclick="startNewChat(${JSON.stringify(u).replace(/"/g, '&quot;')})">
+            <strong>${u.full_name}</strong> <span style="font-size:0.75rem;opacity:0.7">(${u.email})</span>
+          </div>
+        `).join('');
+      }
+      resultsList.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+    }
+  }, 300);
+});
+
+// Hide search results on click outside
+document.addEventListener('click', (e) => {
+  if (e.target !== searchInput) {
+    resultsList.style.display = 'none';
+  }
+});
+
+function startNewChat(partner) {
+  searchInput.value = '';
+  resultsList.style.display = 'none';
+  openConversation(partner);
+}
 
 async function loadStudents() {
   const el = document.getElementById('students-list');
