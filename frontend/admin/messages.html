@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Messages | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+  <style>
+    .messages-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; height: calc(100vh - 120px); }
+    .students-sidebar { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+    .students-sidebar-header { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .student-thread { padding: 0.85rem 1rem; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .student-thread:hover { background: rgba(255,255,255,0.04); }
+    .student-thread.active { background: rgba(99,102,241,0.12); border-left: 3px solid var(--accent); }
+    .thread-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; }
+    .thread-preview { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .unread-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+    .chat-area { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
+    .chat-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--gradient); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 1rem; flex-shrink: 0; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
+    .msg-bubble { max-width: 70%; padding: 0.75rem 1rem; border-radius: 14px; font-size: 0.9rem; line-height: 1.5; }
+    .msg-bubble.sent { align-self: flex-end; background: var(--gradient); color: white; border-bottom-right-radius: 4px; }
+    .msg-bubble.recv { align-self: flex-start; background: rgba(255,255,255,0.07); color: var(--text-secondary); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .msg-time { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; text-align: right; }
+    .msg-time.recv-time { text-align: left; }
+    .chat-input-area { padding: 1rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; }
+    .chat-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem; color: var(--text-primary); font-family: 'Outfit', sans-serif; font-size: 0.9rem; resize: none; max-height: 120px; overflow-y: auto; transition: border-color 0.2s; }
+    .chat-input:focus { outline: none; border-color: var(--accent); }
+    .empty-chat { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0.75rem; color: var(--text-muted); }
+    @media (max-width: 700px) { .messages-layout { grid-template-columns: 1fr; height: auto; } .students-sidebar { max-height: 200px; } }
+  </style>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item active"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main" style="overflow:hidden">
+    <div class="admin-topbar" style="margin-bottom:1rem">
+      <div><h2 class="page-title">Messages</h2><p class="page-subtitle">Conversations with students.</p></div>
+    </div>
+
+    <div class="messages-layout">
+      <!-- Students List -->
+      <div class="students-sidebar">
+        <div class="students-sidebar-header">Student Conversations</div>
+        <div style="flex:1;overflow-y:auto" id="students-list">
+          <div style="padding:1rem;color:var(--text-muted);font-size:0.85rem">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Chat Area -->
+      <div class="chat-area" id="chat-area">
+        <div class="empty-chat">
+          <span style="font-size:3rem">💬</span>
+          <p>Select a student to view conversation</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+let currentStudent = null;
+let pollInterval   = null;
+
+async function loadStudents() {
+  const el = document.getElementById('students-list');
+  try {
+    const students = await api.get('/admin/messages/students');
+    if (!students.length) { el.innerHTML = '<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem">No conversations yet.</div>'; return; }
+    el.innerHTML = students.map(s => `
+      <div class="student-thread${currentStudent?.id === s.id ? ' active' : ''}" onclick="openConversation(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+        <div class="thread-name">
+          ${s.full_name}
+          ${s.unread_count > 0 ? `<span class="unread-dot" title="${s.unread_count} unread"></span>` : ''}
+        </div>
+        <div class="thread-preview">${s.last_message || 'No messages yet'}</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="padding:1rem;color:var(--error);font-size:0.85rem">Failed to load.</div>'; }
+}
+
+async function openConversation(student) {
+  currentStudent = student;
+  clearInterval(pollInterval);
+  document.querySelectorAll('.student-thread').forEach(el => el.classList.remove('active'));
+  const chat = document.getElementById('chat-area');
+  chat.innerHTML = `
+    <div class="chat-header">
+      <div class="chat-avatar">${student.full_name[0].toUpperCase()}</div>
+      <div><div style="font-weight:600;color:var(--text-primary)">${student.full_name}</div><div style="font-size:0.78rem;color:var(--text-muted)">${student.email}</div></div>
+    </div>
+    <div class="chat-messages" id="chat-messages"><div style="text-align:center;color:var(--text-muted);font-size:0.85rem">Loading...</div></div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="reply-input" rows="1" placeholder="Type a reply..." onkeydown="handleEnter(event)"></textarea>
+      <button class="btn btn-primary" onclick="sendReply()" style="flex-shrink:0">Send</button>
+    </div>`;
+  await fetchMessages();
+  loadStudents();
+  pollInterval = setInterval(fetchMessages, 10000);
+}
+
+async function fetchMessages() {
+  if (!currentStudent) return;
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  try {
+    const msgs = await api.get(`/admin/messages/${currentStudent.id}`);
+    if (!msgs.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted)">No messages yet.</div>'; return; }
+    el.innerHTML = msgs.map(m => {
+      const isSent = m.sender_id === user.id;
+      const time   = new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return `<div>
+        <div class="msg-bubble ${isSent ? 'sent' : 'recv'}">${m.content}</div>
+        <div class="msg-time ${isSent ? '' : 'recv-time'}">${time}</div>
+      </div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  } catch(e) {}
+}
+
+async function sendReply() {
+  if (!currentStudent) return;
+  const input = document.getElementById('reply-input');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  try {
+    await api.post(`/admin/messages/${currentStudent.id}`, { content });
+    fetchMessages();
+    loadStudents();
+  } catch(e) { alert('Failed to send message.'); }
+}
+
+function handleEnter(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
+}
+
+loadStudents();
+</script>
+</body>
+</html>

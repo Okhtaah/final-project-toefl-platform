@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test Results | TOEFL Prep Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/student.css"/>
+  <style>
+    body { background: var(--bg-primary); }
+    .results-page { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .results-header { text-align: center; margin-bottom: 3rem; animation: fadeIn 0.6s ease; }
+    .results-header h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .results-header p  { color: var(--text-muted); }
+    /* Score ring */
+    .score-ring-wrap { display: flex; justify-content: center; margin-bottom: 2.5rem; }
+    .score-ring { position: relative; width: 180px; height: 180px; }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-ring circle { fill: none; stroke-width: 12; }
+    .score-ring .bg-ring  { stroke: rgba(255,255,255,0.07); }
+    .score-ring .fg-ring  { stroke: url(#scoreGrad); stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1); }
+    .score-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .score-num  { font-size: 2.5rem; font-weight: 800; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .score-label{ font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    /* Section cards */
+    .sections-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+    .section-score-card { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; text-align: center; backdrop-filter: blur(10px); transition: transform 0.2s; }
+    .section-score-card:hover { transform: translateY(-3px); }
+    .section-icon { font-size: 1.8rem; margin-bottom: 0.5rem; display: block; }
+    .section-name { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem; }
+    .section-pts  { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+    .section-bar  { height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; margin-top: 0.75rem; overflow: hidden; }
+    .section-bar-fill { height: 100%; background: var(--gradient); border-radius: 2px; transition: width 1s ease; }
+    /* Submissions review */
+    .review-header { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .submission-card { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; animation: slideUp 0.3s ease; }
+    .sub-question { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .sub-answer   { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 0.75rem; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem; border-left: 3px solid var(--border); }
+    .sub-footer   { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .badge        { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge-success{ background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .badge-warning{ background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .badge-info   { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+    .score-pill   { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; }
+    .feedback-box { margin-top: 0.75rem; padding: 0.75rem; background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; font-size: 0.85rem; color: #34d399; }
+    .back-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .status-tag { font-size: 0.8rem; padding: 0.35rem 0.85rem; border-radius: 20px; font-weight: 600; }
+    .status-graded    { background: rgba(16,185,129,0.15); color: #34d399; }
+    .status-submitted { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .status-progress  { background: rgba(99,102,241,0.15); color: #818cf8; }
+  </style>
+</head>
+<body>
+<div class="results-page">
+
+  <div class="back-bar">
+    <a href="dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
+    <span class="status-tag" id="attempt-status">Loading...</span>
+  </div>
+
+  <div class="results-header">
+    <h1>🎉 Test <span class="gradient-text">Results</span></h1>
+    <p id="attempt-date">Loading your results...</p>
+  </div>
+
+  <!-- Score Ring -->
+  <div class="score-ring-wrap">
+    <div class="score-ring">
+      <svg viewBox="0 0 180 180" width="180" height="180">
+        <defs>
+          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#8b5cf6"/>
+          </linearGradient>
+        </defs>
+        <circle class="bg-ring" cx="90" cy="90" r="78"/>
+        <circle class="fg-ring" id="score-arc" cx="90" cy="90" r="78" stroke-dasharray="490" stroke-dashoffset="490"/>
+      </svg>
+      <div class="score-center">
+        <span class="score-num" id="total-score">—</span>
+        <span class="score-label">Total Score</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Breakdown -->
+  <div class="sections-grid" id="sections-grid">
+    <div class="section-score-card"><span class="section-icon">📖</span><div class="section-name">Reading</div><div class="section-pts" id="sec-reading">—</div><div class="section-bar"><div class="section-bar-fill" id="bar-reading" style="width:0%"></div></div></div>
+    <div class="section-score-card"><span class="section-icon">🎧</span><div class="section-name">Listening</div><div class="section-pts" id="sec-listening">—</div><div class="section-bar"><div class="section-bar-fill" id="bar-listening" style="width:0%"></div></div></div>
+    <div class="section-score-card"><span class="section-icon">✍️</span><div class="section-name">Writing</div><div class="section-pts" id="sec-writing">—</div><div class="section-bar"><div class="section-bar-fill" id="bar-writing" style="width:0%"></div></div></div>
+    <div class="section-score-card"><span class="section-icon">🎤</span><div class="section-name">Speaking</div><div class="section-pts" id="sec-speaking">—</div><div class="section-bar"><div class="section-bar-fill" id="bar-speaking" style="width:0%"></div></div></div>
+  </div>
+
+  <!-- Submissions Review -->
+  <div class="review-header">📋 Detailed Review</div>
+  <div id="submissions-list">
+    <div style="text-align:center;padding:2rem;color:var(--text-muted)">Loading submissions...</div>
+  </div>
+
+</div>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'STUDENT') window.location.href = '../index.html';
+
+const params    = new URLSearchParams(window.location.search);
+const attemptId = params.get('attemptId');
+if (!attemptId) window.location.href = 'dashboard.html';
+
+async function loadResults() {
+  try {
+    const data = await api.get(`/attempts/${attemptId}`);
+    const attempt     = data.attempt || data;
+    const submissions = data.submissions || [];
+
+    // Status
+    const statusEl = document.getElementById('attempt-status');
+    statusEl.textContent = attempt.status;
+    statusEl.className = `status-tag status-${attempt.status.toLowerCase()}`;
+
+    // Date
+    document.getElementById('attempt-date').textContent =
+      `Completed: ${attempt.end_time ? new Date(attempt.end_time).toLocaleString() : 'In Progress'}`;
+
+    // Score ring
+    const score = attempt.total_score != null ? Math.round(attempt.total_score) : null;
+    const totalEl = document.getElementById('total-score');
+    totalEl.textContent = score != null ? `${score}%` : '—';
+    if (score != null) {
+      setTimeout(() => {
+        const circumference = 2 * Math.PI * 78;
+        const offset = circumference - (score / 100) * circumference;
+        document.getElementById('score-arc').style.strokeDashoffset = offset;
+      }, 300);
+    }
+
+    // Section scores — group submissions by section keywords
+    const secKeywords = { reading: 'reading', listening: 'listening', writing: 'writing', speaking: 'speaking' };
+    Object.entries(secKeywords).forEach(([key, _]) => {
+      const secSubs = submissions.filter(s => {
+        const tt = (s.task_type || '').toLowerCase();
+        if (key === 'reading')   return ['mcq','complete_words','academic_passage'].includes(tt);
+        if (key === 'listening') return ['short_listening','conversation','announcement','academic_talk'].includes(tt);
+        if (key === 'writing')   return ['build_sentence','write_email','academic_discussion'].includes(tt);
+        if (key === 'speaking')  return ['repeat','interview'].includes(tt);
+        return false;
+      });
+      const scored = secSubs.filter(s => s.auto_score != null || s.manual_score != null);
+      const avg = scored.length ? scored.reduce((a,b) => a + (b.manual_score ?? b.auto_score ?? 0), 0) / scored.length * 100 : null;
+      document.getElementById(`sec-${key}`).textContent  = avg != null ? `${Math.round(avg)}%` : '—';
+      setTimeout(() => {
+        document.getElementById(`bar-${key}`).style.width = avg != null ? `${avg}%` : '0%';
+      }, 500);
+    });
+
+    // Submissions list
+    const list = document.getElementById('submissions-list');
+    if (!submissions.length) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)">No submissions found.</div>';
+      return;
+    }
+    list.innerHTML = submissions.map(s => {
+      const isAutoGraded   = s.review_status === 'AUTO_GRADED';
+      const isManualGraded = s.review_status === 'MANUALLY_GRADED';
+      const isPending      = s.review_status === 'PENDING_REVIEW';
+      const displayScore   = s.manual_score ?? s.auto_score;
+      return `
+        <div class="submission-card">
+          <p class="sub-question"><strong>Q:</strong> ${s.prompt || s.question_prompt || 'Question'}</p>
+          ${s.text_response ? `<div class="sub-answer">${s.text_response}</div>` : ''}
+          ${s.audio_response_url ? `<audio controls src="${s.audio_response_url}" style="width:100%;margin-bottom:0.75rem;filter:sepia(0.5)"></audio>` : ''}
+          <div class="sub-footer">
+            <span class="badge ${isAutoGraded ? 'badge-info' : isManualGraded ? 'badge-success' : 'badge-warning'}">
+              ${isAutoGraded ? '✓ Auto Graded' : isManualGraded ? '✓ Reviewed' : '⏳ Pending Review'}
+            </span>
+            ${displayScore != null ? `<span class="score-pill">${(displayScore * 100).toFixed(0)}%</span>` : ''}
+          </div>
+          ${s.admin_feedback ? `<div class="feedback-box">💬 <strong>Feedback:</strong> ${s.admin_feedback}</div>` : ''}
+        </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('submissions-list').innerHTML =
+      '<div style="text-align:center;padding:2rem;color:var(--error)">Failed to load results.</div>';
+  }
+}
+
+loadResults();
+</script>
+</body>
+</html>

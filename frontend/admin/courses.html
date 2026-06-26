@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Courses | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item active"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><h2 class="page-title">Course Management</h2><p class="page-subtitle">Create and manage TOEFL courses, sections, and tasks.</p></div>
+      <button class="btn btn-primary" id="add-course-btn">+ New Course</button>
+    </div>
+
+    <div id="courses-list"><div class="table-loading">Loading courses...</div></div>
+  </main>
+</div>
+
+<!-- Course Modal -->
+<div class="modal-overlay" id="course-modal">
+  <div class="modal-box" style="max-width:500px">
+    <h3 class="modal-title" id="course-modal-title">New Course</h3>
+    <form id="course-form" style="margin-top:1.5rem">
+      <div class="form-group"><label class="form-label">Course Title *</label><input type="text" id="c-title" class="form-input" placeholder="e.g. Full TOEFL Preparation" required/></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea id="c-desc" class="form-input" rows="3" placeholder="Course overview..."></textarea></div>
+      <div class="form-group" style="display:flex;align-items:center;gap:0.75rem">
+        <input type="checkbox" id="c-published" style="width:18px;height:18px;accent-color:var(--accent)"/>
+        <label for="c-published" class="form-label" style="margin:0">Publish immediately</label>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('course-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1" id="course-submit-btn">Create Course</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Section Modal -->
+<div class="modal-overlay" id="section-modal">
+  <div class="modal-box" style="max-width:450px">
+    <h3 class="modal-title" id="section-modal-title">New Section</h3>
+    <form id="section-form" style="margin-top:1.5rem">
+      <input type="hidden" id="s-course-id"/>
+      <input type="hidden" id="s-id"/>
+      <div class="form-group"><label class="form-label">Section Title *</label><input type="text" id="s-title" class="form-input" placeholder="e.g. Reading" required/></div>
+      <div class="form-group"><label class="form-label">Order</label><input type="number" id="s-order" class="form-input" value="1" min="1"/></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('section-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1">Save Section</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal-box" style="max-width:500px;max-height:90vh;overflow-y:auto">
+    <h3 class="modal-title">New Task</h3>
+    <form id="task-form" style="margin-top:1.5rem">
+      <input type="hidden" id="t-section-id"/>
+      <div class="form-group"><label class="form-label">Task Title *</label><input type="text" id="t-title" class="form-input" required/></div>
+      <div class="form-group">
+        <label class="form-label">Task Type *</label>
+        <select id="t-type" class="form-input">
+          <option value="MCQ">MCQ (Multiple Choice)</option>
+          <option value="COMPLETE_WORDS">Complete the Words</option>
+          <option value="ACADEMIC_PASSAGE">Academic Passage</option>
+          <option value="SHORT_LISTENING">Short Listening</option>
+          <option value="CONVERSATION">Conversation</option>
+          <option value="BUILD_SENTENCE">Build a Sentence</option>
+          <option value="WRITE_EMAIL">Write an Email</option>
+          <option value="ACADEMIC_DISCUSSION">Academic Discussion</option>
+          <option value="REPEAT">Listen and Repeat</option>
+          <option value="INTERVIEW">Interview</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Instructions</label><textarea id="t-instructions" class="form-input" rows="2"></textarea></div>
+      <div class="form-group"><label class="form-label">Time Limit (seconds)</label><input type="number" id="t-time" class="form-input" placeholder="e.g. 300"/></div>
+      <div class="form-group"><label class="form-label">Order</label><input type="number" id="t-order" class="form-input" value="1" min="1"/></div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('task-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1">Save Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+let editCourseId = null;
+
+// ── Helpers ──────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// ── Load Courses ──────────────────────────────
+async function loadCourses() {
+  const el = document.getElementById('courses-list');
+  try {
+    const data = await api.get('/admin/courses');
+    const courses = data.courses || data;
+    if (!courses.length) { el.innerHTML = '<div class="section-card"><p style="color:var(--text-muted)">No courses yet. Create your first course!</p></div>'; return; }
+    el.innerHTML = courses.map(c => `
+      <div class="section-card course-card" id="course-card-${c.id}">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+          <div>
+            <h3 style="color:var(--text-primary);font-size:1.1rem;margin-bottom:0.25rem">${c.title}</h3>
+            <p style="color:var(--text-muted);font-size:0.85rem">${c.description || 'No description'}</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+            <span class="badge ${c.is_published ? 'badge-success' : 'badge-warning'}">${c.is_published ? '✓ Published' : 'Draft'}</span>
+            <button class="btn btn-ghost btn-sm" onclick="togglePublish('${c.id}',${c.is_published})">${c.is_published ? 'Unpublish' : 'Publish'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="editCourse('${c.id}','${c.title.replace(/'/g,"\\'")}','${(c.description||'').replace(/'/g,"\\'")}',${c.is_published})">Edit</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadSections('${c.id}')">Sections ▾</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="deleteCourse('${c.id}')">Delete</button>
+          </div>
+        </div>
+        <div id="sections-${c.id}" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)"></div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<p style="color:var(--error);padding:1rem">Failed to load courses.</p>'; }
+}
+
+// ── Course CRUD ───────────────────────────────
+document.getElementById('add-course-btn').onclick = () => {
+  editCourseId = null;
+  document.getElementById('course-modal-title').textContent = 'New Course';
+  document.getElementById('course-submit-btn').textContent = 'Create Course';
+  document.getElementById('c-title').value = '';
+  document.getElementById('c-desc').value  = '';
+  document.getElementById('c-published').checked = false;
+  openModal('course-modal');
+};
+
+document.getElementById('course-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = { title: document.getElementById('c-title').value, description: document.getElementById('c-desc').value, is_published: document.getElementById('c-published').checked };
+  try {
+    if (editCourseId) { await api.put(`/admin/courses/${editCourseId}`, body); }
+    else              { await api.post('/admin/courses', body); }
+    closeModal('course-modal');
+    loadCourses();
+  } catch(e) { alert('Failed to save course: ' + (e.message||'')); }
+};
+
+function editCourse(id, title, desc, published) {
+  editCourseId = id;
+  document.getElementById('course-modal-title').textContent = 'Edit Course';
+  document.getElementById('course-submit-btn').textContent = 'Save Changes';
+  document.getElementById('c-title').value = title;
+  document.getElementById('c-desc').value  = desc;
+  document.getElementById('c-published').checked = published;
+  openModal('course-modal');
+}
+
+async function togglePublish(id, current) {
+  try { await api.put(`/admin/courses/${id}`, { is_published: !current }); loadCourses(); }
+  catch(e) { alert('Failed to update.'); }
+}
+
+async function deleteCourse(id) {
+  if (!confirm('Delete this course and all its content?')) return;
+  try { await api.delete(`/admin/courses/${id}`); loadCourses(); }
+  catch(e) { alert('Failed to delete.'); }
+}
+
+// ── Sections ──────────────────────────────────
+async function loadSections(courseId) {
+  const panel = document.getElementById(`sections-${courseId}`);
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  panel.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem">Loading sections...</div>';
+  try {
+    const data = await api.get(`/admin/courses/${courseId}/sections`);
+    const sections = data.sections || data;
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+        <span style="color:var(--text-muted);font-size:0.85rem;font-weight:600">SECTIONS</span>
+        <button class="btn btn-ghost btn-sm" onclick="openAddSection('${courseId}')">+ Add Section</button>
+      </div>
+      ${sections.length ? sections.map(s => `
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:0.85rem;margin-bottom:0.5rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+            <span style="color:var(--text-primary);font-size:0.9rem;font-weight:500">${s.section_order}. ${s.title}</span>
+            <div style="display:flex;gap:0.4rem">
+              <button class="btn btn-ghost btn-sm" onclick="loadTasks('${s.id}','${s.id}')">Tasks ▾</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="deleteSection('${s.id}','${courseId}')">✕</button>
+            </div>
+          </div>
+          <div id="tasks-${s.id}" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)"></div>
+        </div>`).join('') : '<p style="color:var(--text-muted);font-size:0.85rem">No sections yet.</p>'}`;
+  } catch(e) { panel.innerHTML = '<p style="color:var(--error);font-size:0.85rem">Failed to load sections.</p>'; }
+}
+
+function openAddSection(courseId) {
+  document.getElementById('s-course-id').value = courseId;
+  document.getElementById('s-id').value = '';
+  document.getElementById('s-title').value = '';
+  document.getElementById('s-order').value = '1';
+  openModal('section-modal');
+}
+
+document.getElementById('section-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const courseId = document.getElementById('s-course-id').value;
+  const body = { course_id: courseId, title: document.getElementById('s-title').value, section_order: parseInt(document.getElementById('s-order').value) };
+  try {
+    await api.post('/admin/sections', body);
+    closeModal('section-modal');
+    loadSections(courseId);
+  } catch(e) { alert('Failed to save section.'); }
+};
+
+async function deleteSection(id, courseId) {
+  if (!confirm('Delete this section?')) return;
+  try { await api.delete(`/admin/sections/${id}`); loadSections(courseId); }
+  catch(e) { alert('Failed to delete section.'); }
+}
+
+// ── Tasks ─────────────────────────────────────
+async function loadTasks(sectionId, panelId) {
+  const panel = document.getElementById(`tasks-${panelId}`);
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  panel.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem">Loading...</div>';
+  try {
+    const data = await api.get(`/admin/sections/${sectionId}/tasks`);
+    const tasks = data.tasks || data;
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+        <span style="color:var(--text-muted);font-size:0.75rem;font-weight:600">TASKS</span>
+        <button class="btn btn-ghost btn-sm" style="font-size:0.75rem" onclick="openAddTask('${sectionId}')">+ Add Task</button>
+      </div>
+      ${tasks.length ? tasks.map(t => `
+        <div style="background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:0.65rem;margin-bottom:0.4rem;display:flex;align-items:center;justify-content:space-between">
+          <div><span style="font-size:0.82rem;color:var(--text-secondary)">${t.task_order}. ${t.title}</span> <span class="badge badge-info" style="font-size:0.7rem">${t.task_type}</span></div>
+          <button class="btn btn-ghost btn-sm" style="font-size:0.75rem;color:var(--error)" onclick="deleteTask('${t.id}','${sectionId}')">✕</button>
+        </div>`).join('') : '<p style="color:var(--text-muted);font-size:0.8rem">No tasks yet.</p>'}`;
+  } catch(e) { panel.innerHTML = '<p style="color:var(--error);font-size:0.8rem">Failed to load tasks.</p>'; }
+}
+
+function openAddTask(sectionId) {
+  document.getElementById('t-section-id').value = sectionId;
+  document.getElementById('t-title').value = '';
+  document.getElementById('t-type').value = 'MCQ';
+  document.getElementById('t-instructions').value = '';
+  document.getElementById('t-time').value = '';
+  document.getElementById('t-order').value = '1';
+  openModal('task-modal');
+}
+
+document.getElementById('task-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const sectionId = document.getElementById('t-section-id').value;
+  const body = {
+    section_id: sectionId,
+    title: document.getElementById('t-title').value,
+    task_type: document.getElementById('t-type').value,
+    instructions: document.getElementById('t-instructions').value,
+    time_limit_seconds: parseInt(document.getElementById('t-time').value) || null,
+    task_order: parseInt(document.getElementById('t-order').value) || 1,
+  };
+  try { await api.post('/admin/tasks', body); closeModal('task-modal'); loadTasks(sectionId, sectionId); }
+  catch(e) { alert('Failed to save task.'); }
+};
+
+async function deleteTask(id, sectionId) {
+  if (!confirm('Delete this task?')) return;
+  try { await api.delete(`/admin/tasks/${id}`); loadTasks(sectionId, sectionId); }
+  catch(e) { alert('Failed to delete task.'); }
+}
+
+// ── Close modals on overlay click ─────────────
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); }));
+
+loadCourses();
+</script>
+</body>
+</html>

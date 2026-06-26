@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TOEFL Test | TOEFL Prep Platform</title>
+  <meta name="description" content="Take your TOEFL practice test - Reading, Listening, Writing, and Speaking sections"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/student.css"/>
+  <style>
+    .test-container { display: flex; flex-direction: column; height: 100vh; background: var(--bg-primary); }
+    .test-header { background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .test-header .section-info { display: flex; align-items: center; gap: 1rem; }
+    .section-badge { padding: 0.35rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; }
+    .section-badge.reading  { background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+    .section-badge.listening{ background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .section-badge.writing  { background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .section-badge.speaking { background: rgba(239,68,68,0.2);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .timer-display { display: flex; align-items: center; gap: 0.5rem; font-size: 1.3rem; font-weight: 700; font-family: monospace; color: var(--text-primary); }
+    .timer-display.warning { color: var(--warning); animation: pulse 1s infinite; }
+    .timer-display.danger  { color: var(--error); animation: pulse 0.5s infinite; }
+    .timer-icon { font-size: 1.2rem; }
+    .test-body { flex: 1; overflow: hidden; display: flex; }
+    /* Reading split layout */
+    .reading-layout { display: flex; width: 100%; height: 100%; }
+    .passage-panel { flex: 1; overflow-y: auto; padding: 2rem; border-right: 1px solid var(--border); }
+    .passage-panel h3 { color: var(--accent); margin-bottom: 1rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .passage-text { line-height: 1.9; color: var(--text-secondary); font-size: 0.95rem; }
+    .questions-panel { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; }
+    /* Standard single layout */
+    .single-layout { flex: 1; overflow-y: auto; padding: 2rem; max-width: 800px; margin: 0 auto; width: 100%; }
+    /* Question card */
+    .question-card { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem; margin-bottom: 1.5rem; backdrop-filter: blur(10px); }
+    .question-prompt { font-size: 1.05rem; font-weight: 500; color: var(--text-primary); margin-bottom: 1.25rem; line-height: 1.6; }
+    .question-counter { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    /* MCQ options */
+    .options-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .option-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.9rem 1.1rem; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s ease; }
+    .option-item:hover { border-color: var(--accent); background: rgba(99,102,241,0.08); }
+    .option-item.selected { border-color: var(--accent); background: rgba(99,102,241,0.15); }
+    .option-letter { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
+    .option-item.selected .option-letter { background: var(--accent); border-color: var(--accent); color: white; }
+    .option-text { color: var(--text-secondary); font-size: 0.95rem; }
+    /* Text input */
+    .text-editor { width: 100%; min-height: 200px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: var(--text-primary); font-family: 'Outfit', sans-serif; font-size: 0.95rem; line-height: 1.7; resize: vertical; transition: border-color 0.2s; }
+    .text-editor:focus { outline: none; border-color: var(--accent); }
+    .word-count { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; text-align: right; }
+    /* Audio player */
+    .audio-section { text-align: center; padding: 2rem; }
+    .audio-icon { font-size: 4rem; margin-bottom: 1rem; display: block; animation: float 3s ease-in-out infinite; }
+    .audio-status { color: var(--text-muted); margin-bottom: 1.5rem; }
+    .audio-progress { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin: 1rem 0; }
+    .audio-progress-fill { height: 100%; background: var(--gradient); border-radius: 3px; transition: width 0.3s; }
+    /* Recording */
+    .record-section { text-align: center; padding: 2rem; }
+    .record-btn { width: 90px; height: 90px; border-radius: 50%; background: rgba(239,68,68,0.15); border: 3px solid var(--error); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; transition: all 0.2s; margin-bottom: 1rem; }
+    .record-btn.recording { background: var(--error); animation: pulse 1s infinite; }
+    .record-status { color: var(--text-muted); font-size: 0.9rem; }
+    /* Drag & drop */
+    .drag-words { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 10px; margin-bottom: 1rem; min-height: 60px; border: 2px dashed var(--border); }
+    .drag-target { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; background: rgba(99,102,241,0.05); border-radius: 10px; min-height: 60px; border: 2px dashed rgba(99,102,241,0.3); }
+    .word-chip { padding: 0.4rem 0.85rem; background: var(--glass-bg); border: 1px solid var(--border); border-radius: 20px; font-size: 0.9rem; cursor: grab; transition: all 0.2s; color: var(--text-primary); user-select: none; }
+    .word-chip:hover { border-color: var(--accent); background: rgba(99,102,241,0.1); }
+    .word-chip.dragging { opacity: 0.5; }
+    /* Fill in blanks */
+    .fill-sentence { font-size: 1rem; line-height: 2.2; color: var(--text-secondary); }
+    .fill-blank { display: inline-block; min-width: 80px; border-bottom: 2px solid var(--accent); margin: 0 4px; padding: 0 8px; }
+    .fill-blank input { background: transparent; border: none; outline: none; font-family: 'Outfit', sans-serif; font-size: 1rem; color: var(--text-primary); width: 80px; text-align: center; }
+    /* Navigation footer */
+    .test-footer { background: var(--glass-bg); border-top: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .nav-info { font-size: 0.85rem; color: var(--text-muted); }
+    .nav-buttons { display: flex; gap: 0.75rem; }
+    /* Submit confirm modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal-box { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; max-width: 420px; width: 90%; animation: slideUp 0.3s ease; }
+    .modal-icon { font-size: 3rem; text-align: center; display: block; margin-bottom: 1rem; }
+    .modal-title { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); text-align: center; margin-bottom: 0.5rem; }
+    .modal-desc { color: var(--text-muted); text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .modal-actions { display: flex; gap: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<!-- Submit Confirmation Modal -->
+<div class="modal-overlay" id="submit-modal">
+  <div class="modal-box">
+    <span class="modal-icon">⚠️</span>
+    <h3 class="modal-title">Submit Section?</h3>
+    <p class="modal-desc" id="modal-desc">Once submitted, you cannot return to this section.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="modal-confirm">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Test Container -->
+<div class="test-container">
+  <!-- Header -->
+  <div class="test-header">
+    <div class="section-info">
+      <span class="section-badge" id="section-badge">Reading</span>
+      <span style="color:var(--text-muted);font-size:0.85rem" id="task-title">Task 1</span>
+    </div>
+    <div class="timer-display" id="timer-display">
+      <span class="timer-icon">⏱</span>
+      <span id="timer-text">00:00</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="submit-section-btn">Submit Section →</button>
+  </div>
+
+  <!-- Body (dynamic) -->
+  <div class="test-body" id="test-body">
+    <div class="single-layout" style="display:flex;align-items:center;justify-content:center;">
+      <div class="text-center">
+        <div class="spinner" style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
+        <p style="color:var(--text-muted)">Loading test...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="test-footer">
+    <span class="nav-info" id="nav-info">Question 1 of 1</span>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost btn-sm" id="prev-btn">← Back</button>
+      <button class="btn btn-primary btn-sm" id="next-btn">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+// ─────────────────────────────────────────────
+//  TEST ENGINE
+// ─────────────────────────────────────────────
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'STUDENT') { window.location.href = '../index.html'; }
+
+const params   = new URLSearchParams(window.location.search);
+const attemptId = params.get('attemptId');
+const courseId  = params.get('courseId');
+if (!attemptId || !courseId) { window.location.href = 'dashboard.html'; }
+
+let course      = null;
+let sections    = [];
+let curSection  = 0;
+let curQuestion = 0;
+let answers     = {};
+let timerInterval = null;
+let timeLeft    = 0;
+let audioPlayed = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+
+const sectionColors = ['reading','listening','writing','speaking'];
+
+// DOM refs
+const testBody        = document.getElementById('test-body');
+const timerText       = document.getElementById('timer-text');
+const timerDisplay    = document.getElementById('timer-display');
+const sectionBadge    = document.getElementById('section-badge');
+const taskTitle       = document.getElementById('task-title');
+const navInfo         = document.getElementById('nav-info');
+const prevBtn         = document.getElementById('prev-btn');
+const nextBtn         = document.getElementById('next-btn');
+const submitSectionBtn= document.getElementById('submit-section-btn');
+const submitModal     = document.getElementById('submit-modal');
+const modalConfirm    = document.getElementById('modal-confirm');
+const modalCancel     = document.getElementById('modal-cancel');
+
+// ── Load course + start ──────────────────────
+async function init() {
+  try {
+    const data = await api.get(`/courses/${courseId}`);
+    course   = data.course || data;
+    sections = data.sections || [];
+    renderSection();
+  } catch(e) {
+    showError('Failed to load test. Please try again.');
+  }
+}
+
+function renderSection() {
+  if (curSection >= sections.length) { finishTest(); return; }
+  const sec = sections[curSection];
+  const color = sectionColors[curSection] || 'reading';
+  sectionBadge.textContent = sec.title;
+  sectionBadge.className   = `section-badge ${color}`;
+  curQuestion = 0;
+  stopTimer();
+  answers[sec.id] = answers[sec.id] || {};
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const sec   = sections[curSection];
+  const tasks = sec.tasks || [];
+  if (!tasks.length) { advanceSection(); return; }
+
+  // Flatten all questions across tasks
+  const allQ = [];
+  tasks.forEach(t => (t.questions || []).forEach(q => allQ.push({ ...q, task: t })));
+  if (!allQ.length) { advanceSection(); return; }
+
+  const q = allQ[curQuestion];
+  if (!q) { advanceSection(); return; }
+  taskTitle.textContent = q.task.title;
+  navInfo.textContent   = `Question ${curQuestion + 1} of ${allQ.length}`;
+  prevBtn.style.display = curQuestion > 0 ? '' : 'none';
+  nextBtn.textContent   = curQuestion < allQ.length - 1 ? 'Next →' : 'Finish Section';
+
+  // Timer
+  if (q.task.time_limit_seconds) startTimer(q.task.time_limit_seconds);
+
+  // Render by task type
+  const type = q.task.task_type;
+  if (type === 'MCQ' || type === 'ACADEMIC_PASSAGE' || type === 'SHORT_LISTENING' || type === 'CONVERSATION' || type === 'INTERVIEW') {
+    if (sec.title.toLowerCase().includes('listen') || type === 'SHORT_LISTENING' || type === 'CONVERSATION') {
+      renderListeningQ(q, allQ.length);
+    } else if (type === 'ACADEMIC_PASSAGE') {
+      renderReadingSplit(q, allQ);
+    } else {
+      renderMCQ(q);
+    }
+  } else if (type === 'COMPLETE_WORDS') {
+    renderFillBlanks(q);
+  } else if (type === 'BUILD_SENTENCE') {
+    renderDragDrop(q);
+  } else if (type === 'WRITE_EMAIL' || type === 'ACADEMIC_DISCUSSION') {
+    renderWriting(q);
+  } else if (type === 'REPEAT' || type === 'INTERVIEW') {
+    renderSpeaking(q);
+  } else {
+    renderMCQ(q);
+  }
+}
+
+// ── Reading split layout ──────────────────────
+function renderReadingSplit(q, allQ) {
+  testBody.innerHTML = `
+    <div class="reading-layout">
+      <div class="passage-panel">
+        <h3>📖 Reading Passage</h3>
+        <div class="passage-text">${(q.text_content || 'Passage not available.').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="questions-panel" id="q-panel"></div>
+    </div>`;
+  document.getElementById('q-panel').appendChild(buildMCQCard(q));
+}
+
+// ── MCQ ──────────────────────────────────────
+function renderMCQ(q) {
+  testBody.innerHTML = `<div class="single-layout" id="q-content"></div>`;
+  document.getElementById('q-content').appendChild(buildMCQCard(q));
+}
+
+function buildMCQCard(q) {
+  const sec = sections[curSection];
+  const saved = answers[sec.id]?.[q.id];
+  const div = document.createElement('div');
+  div.className = 'question-card';
+  div.innerHTML = `
+    <p class="question-counter">Question ${curQuestion + 1}</p>
+    <p class="question-prompt">${q.prompt || 'Answer the question.'}</p>
+    <div class="options-list">
+      ${(q.options || []).map((opt,i) => `
+        <div class="option-item${saved === opt.id ? ' selected' : ''}" data-id="${opt.id}" onclick="selectOption(this,'${q.id}')">
+          <span class="option-letter">${String.fromCharCode(65+i)}</span>
+          <span class="option-text">${opt.content}</span>
+        </div>`).join('')}
+    </div>`;
+  return div;
+}
+
+function selectOption(el, qId) {
+  el.closest('.options-list').querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const sec = sections[curSection];
+  if (!answers[sec.id]) answers[sec.id] = {};
+  answers[sec.id][qId] = el.dataset.id;
+}
+
+// ── Listening ─────────────────────────────────
+function renderListeningQ(q, total) {
+  audioPlayed = false;
+  testBody.innerHTML = `
+    <div class="single-layout">
+      <div class="question-card">
+        <div class="audio-section">
+          <span class="audio-icon">🎧</span>
+          <p class="audio-status" id="audio-status">Click play to listen. You can only play once.</p>
+          ${q.media_url ? `<audio id="audio-player" src="${q.media_url}"></audio>` : ''}
+          <div class="audio-progress"><div class="audio-progress-fill" id="audio-fill" style="width:0%"></div></div>
+          <button class="btn btn-primary" id="play-btn" onclick="playAudio()">▶ Play Audio</button>
+        </div>
+      </div>
+      <div id="mcq-area" style="display:none"></div>
+    </div>`;
+}
+
+function playAudio() {
+  const ap = document.getElementById('audio-player');
+  if (!ap) {
+    document.getElementById('audio-status').textContent = 'No audio file for this question.';
+    showMCQAfterAudio();
+    return;
+  }
+  if (audioPlayed) return;
+  audioPlayed = true;
+  document.getElementById('play-btn').disabled = true;
+  document.getElementById('play-btn').textContent = '🔊 Playing...';
+  ap.play();
+  ap.ontimeupdate = () => {
+    const pct = (ap.currentTime / ap.duration) * 100;
+    const fill = document.getElementById('audio-fill');
+    if (fill) fill.style.width = pct + '%';
+  };
+  ap.onended = () => {
+    document.getElementById('audio-status').textContent = 'Audio finished. Answer the question below.';
+    showMCQAfterAudio();
+  };
+}
+
+function showMCQAfterAudio() {
+  const sec = sections[curSection];
+  const tasks = sec.tasks || [];
+  const allQ = [];
+  tasks.forEach(t => (t.questions || []).forEach(q => allQ.push({...q, task:t})));
+  const q = allQ[curQuestion];
+  const area = document.getElementById('mcq-area');
+  if (area) { area.style.display = ''; area.appendChild(buildMCQCard(q)); }
+}
+
+// ── Fill Blanks ───────────────────────────────
+function renderFillBlanks(q) {
+  const sec = sections[curSection];
+  testBody.innerHTML = `
+    <div class="single-layout">
+      <div class="question-card">
+        <p class="question-counter">Fill in the blanks</p>
+        <p class="question-prompt">${q.prompt || ''}</p>
+        <div class="fill-sentence" id="fill-area">
+          ${buildFillSentence(q.text_content || '', q.id, sec.id)}
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildFillSentence(text, qId, secId) {
+  let idx = 0;
+  return text.replace(/_{2,}/g, match => {
+    idx++;
+    const saved = answers[secId]?.[`${qId}_${idx}`] || '';
+    return `<span class="fill-blank"><input type="text" value="${saved}" oninput="saveFill('${qId}',${idx},'${secId}',this.value)" placeholder="..." style="width:${Math.max(60,match.length*9)}px"/></span>`;
+  });
+}
+
+function saveFill(qId, idx, secId, val) {
+  if (!answers[secId]) answers[secId] = {};
+  answers[secId][`${qId}_${idx}`] = val;
+}
+
+// ── Drag & Drop ───────────────────────────────
+function renderDragDrop(q) {
+  const sec = sections[curSection];
+  const words = (q.text_content || '').split(',').map(w => w.trim()).filter(Boolean);
+  const shuffled = [...words].sort(() => Math.random() - 0.5);
+  testBody.innerHTML = `
+    <div class="single-layout">
+      <div class="question-card">
+        <p class="question-counter">Build a Sentence</p>
+        <p class="question-prompt">${q.prompt || 'Arrange the words in the correct order.'}</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem">Drag words to the answer area:</p>
+        <div class="drag-words" id="word-bank">
+          ${shuffled.map(w => `<div class="word-chip" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">${w}</div>`).join('')}
+        </div>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem;margin-top:1rem">Your answer:</p>
+        <div class="drag-target" id="drag-target"
+          ondragover="event.preventDefault()"
+          ondrop="dropWord(event,'${q.id}','${sec.id}')"></div>
+      </div>
+    </div>`;
+}
+
+let draggedEl = null;
+function dragStart(e) { draggedEl = e.target; e.target.classList.add('dragging'); }
+function dragEnd(e)   { e.target.classList.remove('dragging'); }
+function dropWord(e, qId, secId) {
+  e.preventDefault();
+  if (!draggedEl) return;
+  document.getElementById('drag-target').appendChild(draggedEl);
+  const order = [...document.getElementById('drag-target').children].map(c => c.textContent).join(' ');
+  if (!answers[secId]) answers[secId] = {};
+  answers[secId][qId] = order;
+}
+
+// ── Writing ───────────────────────────────────
+function renderWriting(q) {
+  const sec  = sections[curSection];
+  const saved = answers[sec.id]?.[q.id] || '';
+  testBody.innerHTML = `
+    <div class="single-layout">
+      <div class="question-card">
+        <p class="question-counter">${q.task.task_type === 'ACADEMIC_DISCUSSION' ? '🎓 Academic Discussion' : '✉️ Write an Email'}</p>
+        <p class="question-prompt">${q.prompt || ''}</p>
+        ${q.text_content ? `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1rem;font-size:0.9rem;color:var(--text-muted)">${q.text_content.replace(/\n/g,'<br>')}</div>` : ''}
+        <textarea class="text-editor" id="writing-input" placeholder="Write your response here..." oninput="saveWriting('${q.id}','${sec.id}',this.value);updateWordCount(this)">${saved}</textarea>
+        <div class="word-count">Words: <span id="word-count-display">0</span></div>
+      </div>
+    </div>`;
+  const ta = document.getElementById('writing-input');
+  if (ta) updateWordCount(ta);
+}
+
+function saveWriting(qId, secId, val) {
+  if (!answers[secId]) answers[secId] = {};
+  answers[secId][qId] = val;
+}
+
+function updateWordCount(ta) {
+  const wc = document.getElementById('word-count-display');
+  if (wc) wc.textContent = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+}
+
+// ── Speaking ──────────────────────────────────
+function renderSpeaking(q) {
+  const sec = sections[curSection];
+  testBody.innerHTML = `
+    <div class="single-layout">
+      <div class="question-card">
+        <p class="question-counter">🎤 Speaking Task</p>
+        <p class="question-prompt">${q.prompt || 'Listen to the prompt and record your response.'}</p>
+        ${q.media_url ? `<div style="margin-bottom:1rem"><audio controls src="${q.media_url}" style="width:100%;filter:sepia(0.5)"></audio></div>` : ''}
+        <div class="record-section">
+          <button class="record-btn" id="record-btn" onclick="toggleRecording('${q.id}','${sec.id}')">🎙</button>
+          <p class="record-status" id="record-status">Click to start recording</p>
+          <div id="recorded-playback"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function toggleRecording(qId, secId) {
+  const btn    = document.getElementById('record-btn');
+  const status = document.getElementById('record-status');
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const url  = URL.createObjectURL(blob);
+        if (!answers[secId]) answers[secId] = {};
+        answers[secId][qId] = { type: 'audio', url, blob };
+        const pb = document.getElementById('recorded-playback');
+        if (pb) pb.innerHTML = `<audio controls src="${url}" style="width:100%;margin-top:1rem;filter:sepia(0.5)"></audio>`;
+        status.textContent = 'Recording saved. You can re-record.';
+        btn.classList.remove('recording');
+        btn.textContent = '🎙';
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      btn.classList.add('recording');
+      btn.textContent = '⏹';
+      status.textContent = '🔴 Recording... Click to stop.';
+    } catch(e) {
+      status.textContent = 'Microphone access denied.';
+    }
+  } else if (mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+}
+
+// ── Timer ─────────────────────────────────────
+function startTimer(seconds) {
+  stopTimer();
+  timeLeft = seconds;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) { stopTimer(); autoSubmitSection(); }
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+function updateTimerDisplay() {
+  const m = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+  const s = (timeLeft % 60).toString().padStart(2,'0');
+  timerText.textContent = `${m}:${s}`;
+  timerDisplay.classList.toggle('warning', timeLeft <= 60 && timeLeft > 20);
+  timerDisplay.classList.toggle('danger',  timeLeft <= 20);
+}
+
+function autoSubmitSection() { advanceSection(); }
+
+// ── Navigation ────────────────────────────────
+function advanceQuestion() {
+  const sec = sections[curSection];
+  const tasks = sec.tasks || [];
+  const allQ = [];
+  tasks.forEach(t => (t.questions || []).forEach(q => allQ.push({...q, task:t})));
+  if (curQuestion < allQ.length - 1) {
+    curQuestion++;
+    renderQuestion();
+  } else {
+    openSubmitModal('Submit this section? You cannot return to it.');
+  }
+}
+
+function goBack() {
+  if (curQuestion > 0) { curQuestion--; renderQuestion(); }
+}
+
+function openSubmitModal(msg) {
+  document.getElementById('modal-desc').textContent = msg;
+  submitModal.classList.add('active');
+}
+
+function closeSubmitModal() { submitModal.classList.remove('active'); }
+
+async function advanceSection() {
+  closeSubmitModal();
+  stopTimer();
+  // Submit current section answers
+  try {
+    const sec = sections[curSection];
+    const payload = Object.entries(answers[sec.id] || {}).map(([qId, ans]) => ({
+      question_id: qId,
+      text_response: typeof ans === 'string' ? ans : (ans?.url ? null : JSON.stringify(ans)),
+    }));
+    await api.post(`/attempts/${attemptId}/submit`, { section_id: sec.id, answers: payload });
+  } catch(e) { console.error('Submit error', e); }
+  curSection++;
+  if (curSection >= sections.length) { finishTest(); } else { renderSection(); }
+}
+
+async function finishTest() {
+  stopTimer();
+  try { await api.post(`/attempts/${attemptId}/finish`, {}); } catch(e) {}
+  window.location.href = `results.html?attemptId=${attemptId}`;
+}
+
+function showError(msg) {
+  testBody.innerHTML = `<div class="single-layout" style="display:flex;align-items:center;justify-content:center;"><div class="text-center"><p style="font-size:3rem">❌</p><h3 style="color:var(--text-primary);margin-bottom:0.5rem">Error</h3><p style="color:var(--text-muted)">${msg}</p><a href="dashboard.html" class="btn btn-primary" style="margin-top:1.5rem">← Back to Dashboard</a></div></div>`;
+}
+
+// ── Events ────────────────────────────────────
+nextBtn.addEventListener('click', advanceQuestion);
+prevBtn.addEventListener('click', goBack);
+submitSectionBtn.addEventListener('click', () => openSubmitModal('Submit this section now? You cannot go back.'));
+modalConfirm.addEventListener('click', advanceSection);
+modalCancel.addEventListener('click', closeSubmitModal);
+
+// ── Init ──────────────────────────────────────
+init();
+</script>
+</body>
+</html>

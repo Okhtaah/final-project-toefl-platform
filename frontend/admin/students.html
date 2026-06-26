@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Students | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item active"><span class="nav-icon">👥</span><span>Students</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><h2 class="page-title">Students</h2><p class="page-subtitle">View all registered students and their progress.</p></div>
+      <input type="text" id="search-students" class="form-input" placeholder="Search students..." style="max-width:240px" oninput="filterStudents()"/>
+    </div>
+    <div class="section-card">
+      <div id="students-table"><div class="table-loading">Loading students...</div></div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+let allStudents = [];
+
+async function loadStudents() {
+  const el = document.getElementById('students-table');
+  try {
+    const data = await api.get('/admin/students');
+    allStudents = data.students || data;
+    renderStudents(allStudents);
+  } catch(e) { el.innerHTML = '<p style="color:var(--error)">Failed to load students.</p>'; }
+}
+
+function renderStudents(students) {
+  const el = document.getElementById('students-table');
+  if (!students.length) { el.innerHTML = '<p style="color:var(--text-muted)">No students registered yet.</p>'; return; }
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Student</th><th>Email</th><th>Joined</th><th>Tests Taken</th><th>Avg Score</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${students.map(s => `<tr>
+      <td><div style="display:flex;align-items:center;gap:0.6rem"><div style="width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.85rem;flex-shrink:0">${s.full_name[0].toUpperCase()}</div>${s.full_name}</div></td>
+      <td style="color:var(--text-muted)">${s.email}</td>
+      <td style="color:var(--text-muted)">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td>${s.total_attempts || 0}</td>
+      <td>${s.average_score != null ? Math.round(s.average_score) + '%' : '—'}</td>
+      <td><div style="display:flex;gap:0.4rem"><a href="messages.html" class="btn btn-ghost btn-sm">Message</a></div></td>
+    </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function filterStudents() {
+  const q = document.getElementById('search-students').value.toLowerCase();
+  renderStudents(allStudents.filter(s => s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)));
+}
+
+loadStudents();
+</script>
+</body>
+</html>

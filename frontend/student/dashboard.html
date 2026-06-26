@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — TOEFL Mastery</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/student.css" />
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Mobile Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle"><span></span></button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="sidebar-nav-item active">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="#courses" class="sidebar-nav-item" id="navCourses" onclick="scrollToSection('coursesSection')">
+          <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="#messages" class="sidebar-nav-item" id="navMessages" onclick="openMessages()">
+          <span class="nav-icon">💬</span> Messages
+        </a>
+        <a href="#profile" class="sidebar-nav-item" id="navProfile" onclick="openProfile()">
+          <span class="nav-icon">👤</span> Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-block" onclick="auth.logout()">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <!-- Welcome Banner -->
+      <div class="welcome-banner animate-in">
+        <h1 id="welcomeMsg">Welcome back! 👋</h1>
+        <p>Continue your TOEFL preparation journey</p>
+      </div>
+
+      <!-- Access Code -->
+      <div class="access-code-section animate-in" id="accessCodeSection">
+        <h3 style="margin-bottom: var(--sp-md);">🔑 Redeem Access Code</h3>
+        <p class="body-sm text-muted" style="margin-bottom: var(--sp-md);">Enter an access code to unlock a course or section.</p>
+        <div class="input-group">
+          <input type="text" class="form-input" id="accessCodeInput" placeholder="ENTER-CODE-HERE" maxlength="30" />
+          <button class="btn btn-primary" id="redeemBtn" onclick="redeemCode()">Redeem</button>
+        </div>
+        <div id="codeAlert" class="form-alert mt-sm" style="display:none;"></div>
+      </div>
+
+      <!-- Courses -->
+      <section id="coursesSection">
+        <div class="page-header animate-in">
+          <h2>My Courses</h2>
+          <p>Your enrolled and available courses</p>
+        </div>
+        <div class="grid grid-3" id="coursesGrid">
+          <!-- Skeleton -->
+          <div class="card skeleton skeleton-card"></div>
+          <div class="card skeleton skeleton-card"></div>
+          <div class="card skeleton skeleton-card"></div>
+        </div>
+        <div id="coursesEmpty" class="empty-state hidden">
+          <div class="empty-icon">📚</div>
+          <p>No courses available yet. Use an access code to get started!</p>
+        </div>
+      </section>
+
+      <!-- Recent Attempts -->
+      <section class="mt-xl" id="attemptsSection">
+        <div class="page-header animate-in">
+          <h2>Recent Test Attempts</h2>
+          <p>Your latest practice results</p>
+        </div>
+        <div id="attemptsList">
+          <div class="card skeleton skeleton-card" style="height:100px;margin-bottom:12px;"></div>
+          <div class="card skeleton skeleton-card" style="height:100px;margin-bottom:12px;"></div>
+        </div>
+        <div id="attemptsEmpty" class="empty-state hidden">
+          <div class="empty-icon">📝</div>
+          <p>No test attempts yet. Start a practice test!</p>
+        </div>
+      </section>
+
+      <!-- Messages Section -->
+      <section class="mt-xl hidden" id="messagesSection">
+        <div class="page-header">
+          <h2>💬 Messages</h2>
+          <p>Chat with your instructor</p>
+        </div>
+        <div class="card" style="min-height:400px;">
+          <div id="messagesList" class="conversation-messages" style="min-height:300px;max-height:400px;overflow-y:auto;margin-bottom:var(--sp-md);"></div>
+          <div class="conversation-input">
+            <input type="text" class="form-input" id="msgInput" placeholder="Type your message..." />
+            <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Profile Section -->
+      <section class="mt-xl hidden" id="profileSection">
+        <div class="page-header">
+          <h2>👤 Profile</h2>
+          <p>Your account details</p>
+        </div>
+        <div class="card" style="max-width:500px;">
+          <div class="flex gap-lg" style="align-items:center;margin-bottom:var(--sp-xl);">
+            <div class="avatar avatar-lg" id="profileAvatar">?</div>
+            <div>
+              <h3 id="profileName">—</h3>
+              <p class="body-sm text-muted" id="profileEmail">—</p>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-input" id="profileNameInput" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="profileEmailInput" disabled />
+          </div>
+          <button class="btn btn-primary" onclick="updateProfile()">Save Changes</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- WhatsApp FAB -->
+    <a href="https://wa.me/+201234567890" target="_blank" class="fab-whatsapp" data-tooltip="Chat on WhatsApp">💬</a>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    // Guard
+    if (!auth.requireRole('student')) throw new Error('redirect');
+
+    const user = auth.getUser();
+
+    // Welcome
+    document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.name || 'Student'}! 👋`;
+    document.getElementById('profileAvatar').textContent = (user.name || '?')[0].toUpperCase();
+    document.getElementById('profileName').textContent = user.name || '';
+    document.getElementById('profileEmail').textContent = user.email || '';
+    document.getElementById('profileNameInput').value = user.name || '';
+    document.getElementById('profileEmailInput').value = user.email || '';
+
+    // Sidebar mobile
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+
+    // Toast util
+    function showToast(msg, type = 'success') {
+      const c = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // Section nav helpers
+    function scrollToSection(id) {
+      document.querySelectorAll('section[id]').forEach(s => s.classList.remove('hidden'));
+      document.getElementById('messagesSection').classList.add('hidden');
+      document.getElementById('profileSection').classList.add('hidden');
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }
+    function openMessages() {
+      document.getElementById('messagesSection').classList.remove('hidden');
+      document.getElementById('profileSection').classList.add('hidden');
+      document.getElementById('messagesSection').scrollIntoView({ behavior: 'smooth' });
+      loadMessages();
+    }
+    function openProfile() {
+      document.getElementById('profileSection').classList.remove('hidden');
+      document.getElementById('messagesSection').classList.add('hidden');
+      document.getElementById('profileSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ---- Load Courses ----
+    async function loadCourses() {
+      try {
+        const data = await api.get('/courses');
+        const courses = data.courses || data.data || data || [];
+        const grid = document.getElementById('coursesGrid');
+        grid.innerHTML = '';
+        if (!courses.length) {
+          document.getElementById('coursesEmpty').classList.remove('hidden');
+          return;
+        }
+        courses.forEach((c, i) => {
+          const isLocked = !c.isEnrolled && !c.unlocked;
+          grid.innerHTML += `
+            <div class="card course-card ${isLocked ? 'locked' : ''} animate-in" style="animation-delay:${i * 0.1}s">
+              <div class="course-img">${getCourseLogo(c.title || c.name)}</div>
+              <div class="course-title">${c.title || c.name || 'Course'}</div>
+              <div class="course-desc">${c.description || 'No description.'}</div>
+              <div class="flex-between mt-md">
+                <span class="badge ${isLocked ? 'badge-neutral' : 'badge-success'}">${isLocked ? '🔒 Locked' : '✅ Enrolled'}</span>
+                ${!isLocked ? `<a href="test.html?courseId=${c._id}" class="btn btn-sm btn-primary">Start Practice</a>` : ''}
+              </div>
+            </div>`;
+        });
+      } catch (e) {
+        console.error(e);
+        document.getElementById('coursesGrid').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+      }
+    }
+
+    function getCourseLogo(title) {
+      if (!title) return '📘';
+      const t = title.toLowerCase();
+      if (t.includes('reading')) return '📖';
+      if (t.includes('listen'))  return '🎧';
+      if (t.includes('writ'))   return '✍️';
+      if (t.includes('speak'))  return '🎤';
+      return '📘';
+    }
+
+    // ---- Load Attempts ----
+    async function loadAttempts() {
+      try {
+        const data = await api.get('/submissions/my');
+        const attempts = data.submissions || data.data || data || [];
+        const list = document.getElementById('attemptsList');
+        list.innerHTML = '';
+        if (!attempts.length) {
+          document.getElementById('attemptsEmpty').classList.remove('hidden');
+          return;
+        }
+        attempts.slice(0, 10).forEach((a, i) => {
+          const date = new Date(a.createdAt || a.submittedAt).toLocaleDateString();
+          const score = a.score != null ? a.score : '—';
+          const status = a.status || (a.score != null ? 'graded' : 'pending');
+          list.innerHTML += `
+            <div class="card flex-between animate-in" style="animation-delay:${i * 0.08}s;padding:var(--sp-lg);">
+              <div>
+                <div class="heading-4">${a.taskTitle || a.task?.title || 'Test'}</div>
+                <div class="body-sm text-muted">${date}</div>
+              </div>
+              <div class="flex gap-md" style="align-items:center;">
+                <span class="badge ${status === 'graded' ? 'badge-success' : 'badge-warning'}">${status === 'graded' ? '✅ Graded' : '⏳ Pending'}</span>
+                <div class="heading-3">${score}<span class="body-sm text-muted">/30</span></div>
+              </div>
+            </div>`;
+        });
+      } catch (e) {
+        console.error(e);
+        document.getElementById('attemptsList').innerHTML = '';
+        document.getElementById('attemptsEmpty').classList.remove('hidden');
+      }
+    }
+
+    // ---- Redeem Code ----
+    async function redeemCode() {
+      const code = document.getElementById('accessCodeInput').value.trim();
+      if (!code) return;
+      const btn = document.getElementById('redeemBtn');
+      const alert = document.getElementById('codeAlert');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      try {
+        await api.post('/access-codes/redeem', { code });
+        alert.className = 'form-alert mt-sm alert-success';
+        alert.style.display = 'flex';
+        alert.textContent = '✅ Code redeemed successfully!';
+        showToast('Access code redeemed!');
+        document.getElementById('accessCodeInput').value = '';
+        loadCourses();
+      } catch (e) {
+        alert.className = 'form-alert mt-sm alert-error';
+        alert.style.display = 'flex';
+        alert.textContent = '⚠️ ' + e.message;
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    }
+
+    // ---- Messages ----
+    async function loadMessages() {
+      try {
+        const data = await api.get('/messages');
+        const msgs = data.messages || data.data || data || [];
+        const list = document.getElementById('messagesList');
+        list.innerHTML = '';
+        if (!msgs.length) {
+          list.innerHTML = '<div class="empty-state"><p>No messages yet. Say hello!</p></div>';
+          return;
+        }
+        msgs.forEach(m => {
+          const isMine = m.sender === user._id || m.sender?._id === user._id;
+          const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          list.innerHTML += `
+            <div class="message-bubble ${isMine ? 'sent' : 'received'}">
+              ${m.content || m.text || m.message}
+              <div class="msg-time">${time}</div>
+            </div>`;
+        });
+        list.scrollTop = list.scrollHeight;
+      } catch (e) { console.error(e); }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('msgInput');
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        await api.post('/messages', { content: text });
+        input.value = '';
+        loadMessages();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+    document.getElementById('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+    // ---- Profile ----
+    async function updateProfile() {
+      try {
+        const name = document.getElementById('profileNameInput').value.trim();
+        await api.put('/auth/profile', { name });
+        const u = auth.getUser();
+        u.name = name;
+        localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(u));
+        document.getElementById('welcomeMsg').textContent = `Welcome back, ${name}! 👋`;
+        document.getElementById('profileName').textContent = name;
+        document.getElementById('profileAvatar').textContent = name[0].toUpperCase();
+        showToast('Profile updated!');
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // ---- Init ----
+    loadCourses();
+    loadAttempts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Submissions | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+  <style>
+    .filter-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filter-tab  { padding: 0.45rem 1.1rem; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-family: 'Outfit',sans-serif; transition: all 0.2s; }
+    .filter-tab:hover  { border-color: var(--accent); color: var(--text-primary); }
+    .filter-tab.active { background: rgba(99,102,241,0.15); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .submission-review-card { background: var(--glass-bg); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; animation: slideUp 0.3s ease; }
+    .sub-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .sub-student { font-weight: 600; color: var(--text-primary); }
+    .sub-question { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .sub-response { background: rgba(255,255,255,0.03); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 0.85rem 1rem; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem; white-space: pre-wrap; }
+    .grade-form { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    .grade-input { padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: 'Outfit',sans-serif; font-size: 0.9rem; width: 90px; }
+    .feedback-input { flex: 1; min-width: 180px; padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-primary); font-family: 'Outfit',sans-serif; font-size: 0.9rem; }
+    .graded-info { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #34d399; margin-top: 0.75rem; }
+  </style>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item active"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><h2 class="page-title">Submissions</h2><p class="page-subtitle">Review and grade student responses.</p></div>
+    </div>
+
+    <div class="filter-tabs">
+      <button class="filter-tab active" id="tab-pending" onclick="setFilter('PENDING_REVIEW',this)">⏳ Pending</button>
+      <button class="filter-tab" id="tab-manual"  onclick="setFilter('MANUALLY_GRADED',this)">✓ Graded</button>
+      <button class="filter-tab" id="tab-auto"    onclick="setFilter('AUTO_GRADED',this)">🤖 Auto Graded</button>
+      <button class="filter-tab" id="tab-all"     onclick="setFilter('',this)">All</button>
+    </div>
+
+    <div id="submissions-container"><div class="table-loading">Loading submissions...</div></div>
+  </main>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+let currentFilter = 'PENDING_REVIEW';
+
+function setFilter(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  loadSubmissions();
+}
+
+async function loadSubmissions() {
+  const el = document.getElementById('submissions-container');
+  el.innerHTML = '<div class="table-loading">Loading...</div>';
+  try {
+    const url  = currentFilter ? `/admin/submissions?status=${currentFilter}` : '/admin/submissions';
+    const data = await api.get(url);
+    const subs = data.submissions || data;
+    if (!subs.length) { el.innerHTML = '<div class="section-card"><p style="color:var(--text-muted)">No submissions found.</p></div>'; return; }
+    el.innerHTML = subs.map(s => buildCard(s)).join('');
+  } catch(e) { el.innerHTML = '<p style="color:var(--error);padding:1rem">Failed to load submissions.</p>'; }
+}
+
+function buildCard(s) {
+  const isPending = s.review_status === 'PENDING_REVIEW';
+  const isGraded  = s.review_status === 'MANUALLY_GRADED';
+  const isAuto    = s.review_status === 'AUTO_GRADED';
+  const statusClass = isPending ? 'badge-warning' : isGraded ? 'badge-success' : 'badge-info';
+  const statusText  = isPending ? '⏳ Pending' : isGraded ? '✓ Graded' : '🤖 Auto';
+  return `
+    <div class="submission-review-card" id="sub-${s.id}">
+      <div class="sub-meta">
+        <span class="sub-student">👤 ${s.student_name || '—'}</span>
+        <span style="color:var(--text-muted);font-size:0.8rem">${s.student_email || ''}</span>
+        <span class="badge ${statusClass}">${statusText}</span>
+        ${s.task_type ? `<span class="badge badge-info">${s.task_type}</span>` : ''}
+      </div>
+      <p class="sub-question"><strong>Q:</strong> ${s.prompt || s.question_prompt || 'Question prompt not available'}</p>
+      ${s.text_response ? `<div class="sub-response">${s.text_response}</div>` : ''}
+      ${s.audio_response_url ? `<div style="margin-bottom:1rem"><audio controls src="${s.audio_response_url}" style="width:100%;filter:sepia(0.5)"></audio></div>` : ''}
+      ${!s.text_response && !s.audio_response_url ? '<p style="color:var(--text-muted);font-style:italic;font-size:0.85rem">No response submitted.</p>' : ''}
+      ${isGraded ? `<div class="graded-info">Score: ${((s.manual_score||0)*100).toFixed(0)}% ${s.admin_feedback ? ' | Feedback: '+s.admin_feedback : ''}</div>` : ''}
+      ${isAuto ? `<div class="graded-info">Auto Score: ${((s.auto_score||0)*100).toFixed(0)}%</div>` : ''}
+      ${isPending || isGraded ? `
+        <div class="grade-form">
+          <div>
+            <label style="display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:0.3rem">Score (0-1)</label>
+            <input type="number" class="grade-input" id="score-${s.id}" min="0" max="1" step="0.01" value="${s.manual_score ?? ''}" placeholder="0.0"/>
+          </div>
+          <div style="flex:1">
+            <label style="display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:0.3rem">Feedback</label>
+            <input type="text" class="feedback-input" id="feedback-${s.id}" value="${s.admin_feedback||''}" placeholder="Optional feedback for student..."/>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="gradeSubmission('${s.id}')">Submit Grade</button>
+        </div>` : ''}
+    </div>`;
+}
+
+async function gradeSubmission(id) {
+  const score    = parseFloat(document.getElementById(`score-${id}`).value);
+  const feedback = document.getElementById(`feedback-${id}`).value;
+  if (isNaN(score) || score < 0 || score > 1) { alert('Score must be between 0 and 1 (e.g. 0.85 = 85%)'); return; }
+  try {
+    await api.post(`/admin/submissions/${id}/grade`, { manual_score: score, admin_feedback: feedback });
+    loadSubmissions();
+  } catch(e) { alert('Failed to grade: ' + (e.message||'')); }
+}
+
+loadSubmissions();
+</script>
+</body>
+</html>

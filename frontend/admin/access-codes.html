@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Access Codes | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="access-codes.html" class="nav-item active"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><h2 class="page-title">Access Codes</h2><p class="page-subtitle">Generate and manage student access codes.</p></div>
+      <button class="btn btn-primary" id="generate-btn">🔑 Generate Code</button>
+    </div>
+
+    <!-- Generate Form Card -->
+    <div class="section-card" id="generate-form-card" style="display:none">
+      <h3 class="section-title">Generate New Code</h3>
+      <form id="generate-form">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem">
+          <div class="form-group">
+            <label class="form-label">Target Type *</label>
+            <select id="g-target-type" class="form-input" onchange="loadTargets()">
+              <option value="COURSE">Entire Course</option>
+              <option value="SECTION">Section Only</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target *</label>
+            <select id="g-target-id" class="form-input"><option>Loading...</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Uses</label>
+            <input type="number" id="g-max-uses" class="form-input" value="1" min="1"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expires At</label>
+            <input type="datetime-local" id="g-expires" class="form-input"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:0.75rem">
+          <button type="submit" class="btn btn-primary">Generate Code</button>
+          <button type="button" class="btn btn-ghost" id="cancel-generate">Cancel</button>
+        </div>
+      </form>
+      <!-- Generated code display -->
+      <div id="generated-display" style="display:none;margin-top:1.5rem;padding:1rem;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.3);border-radius:12px;text-align:center">
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem">Generated Code:</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem">
+          <code id="generated-code" style="font-size:1.4rem;font-weight:700;color:#34d399;letter-spacing:0.15em;font-family:monospace"></code>
+          <button class="btn btn-ghost btn-sm" onclick="copyCode()">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Codes Table -->
+    <div class="section-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <h3 class="section-title" style="margin:0">All Access Codes</h3>
+        <input type="text" id="search-codes" class="form-input" placeholder="Search codes..." style="max-width:220px" oninput="filterCodes()"/>
+      </div>
+      <div id="codes-table"><div class="table-loading">Loading codes...</div></div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+let allCodes = [];
+let allCourses = [];
+
+document.getElementById('generate-btn').onclick = () => {
+  const card = document.getElementById('generate-form-card');
+  card.style.display = card.style.display === 'none' ? '' : 'none';
+  if (card.style.display !== 'none') loadTargets();
+};
+document.getElementById('cancel-generate').onclick = () => {
+  document.getElementById('generate-form-card').style.display = 'none';
+};
+
+async function loadTargets() {
+  const type  = document.getElementById('g-target-type').value;
+  const sel   = document.getElementById('g-target-id');
+  sel.innerHTML = '<option>Loading...</option>';
+  try {
+    if (type === 'COURSE') {
+      const data = await api.get('/admin/courses');
+      allCourses = data.courses || data;
+      sel.innerHTML = allCourses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+    } else {
+      // Load all sections from all courses
+      if (!allCourses.length) { const d = await api.get('/admin/courses'); allCourses = d.courses || d; }
+      let sections = [];
+      for (const c of allCourses) {
+        const sd = await api.get(`/admin/courses/${c.id}/sections`);
+        (sd.sections || sd).forEach(s => sections.push({ ...s, courseTitle: c.title }));
+      }
+      sel.innerHTML = sections.map(s => `<option value="${s.id}">${s.courseTitle} → ${s.title}</option>`).join('');
+    }
+  } catch(e) { sel.innerHTML = '<option>Failed to load</option>'; }
+}
+
+document.getElementById('generate-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = {
+    target_type: document.getElementById('g-target-type').value,
+    target_id:   document.getElementById('g-target-id').value,
+    max_uses:    parseInt(document.getElementById('g-max-uses').value) || 1,
+    expires_at:  document.getElementById('g-expires').value || null,
+  };
+  try {
+    const data = await api.post('/api/access-codes', body);
+    const code = data.code || data.access_code?.code || 'GENERATED';
+    document.getElementById('generated-code').textContent = code;
+    document.getElementById('generated-display').style.display = '';
+    loadCodes();
+  } catch(e) { alert('Failed to generate code: ' + (e.message||'')); }
+};
+
+function copyCode() {
+  const code = document.getElementById('generated-code').textContent;
+  navigator.clipboard.writeText(code).then(() => alert('Code copied!'));
+}
+
+async function loadCodes() {
+  const el = document.getElementById('codes-table');
+  try {
+    const data = await api.get('/api/access-codes');
+    allCodes = data.codes || data;
+    renderCodes(allCodes);
+  } catch(e) { el.innerHTML = '<p style="color:var(--error)">Failed to load codes.</p>'; }
+}
+
+function renderCodes(codes) {
+  const el = document.getElementById('codes-table');
+  if (!codes.length) { el.innerHTML = '<p style="color:var(--text-muted);padding:1rem 0">No codes generated yet.</p>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Code</th><th>Type</th><th>Uses</th><th>Expires</th><th>Status</th><th>Action</th></tr></thead><tbody>
+    ${codes.map(c => {
+      const expired = c.expires_at && new Date(c.expires_at) < new Date();
+      const full    = c.current_uses >= c.max_uses;
+      const status  = expired ? 'Expired' : full ? 'Full' : 'Active';
+      const statusClass = expired || full ? 'badge-warning' : 'badge-success';
+      return `<tr>
+        <td><code style="font-family:monospace;color:var(--accent);letter-spacing:0.1em;font-size:0.9rem">${c.code}</code> <button onclick="navigator.clipboard.writeText('${c.code}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.8rem">📋</button></td>
+        <td><span class="badge badge-info">${c.target_type}</span></td>
+        <td>${c.current_uses} / ${c.max_uses}</td>
+        <td>${c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '—'}</td>
+        <td><span class="badge ${statusClass}">${status}</span></td>
+        <td><button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="deleteCode('${c.id}')">Delete</button></td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+function filterCodes() {
+  const q = document.getElementById('search-codes').value.toLowerCase();
+  renderCodes(allCodes.filter(c => c.code.toLowerCase().includes(q)));
+}
+
+async function deleteCode(id) {
+  if (!confirm('Delete this access code?')) return;
+  try { await api.delete(`/api/access-codes/${id}`); loadCodes(); }
+  catch(e) { alert('Failed to delete.'); }
+}
+
+loadTargets();
+loadCodes();
+</script>
+</body>
+</html>

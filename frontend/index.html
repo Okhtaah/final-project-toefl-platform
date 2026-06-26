@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TOEFL Mastery — Login</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <style>
+    /* ---- Auth Page ---- */
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-xl);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Animated gradient background */
+    .auth-page::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(99,102,241,0.15), transparent 50%),
+                  radial-gradient(circle at 70% 80%, rgba(139,92,246,0.1), transparent 50%),
+                  radial-gradient(circle at 50% 20%, rgba(59,130,246,0.08), transparent 40%);
+      animation: float 20s ease infinite;
+    }
+    /* Floating orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .orb-1 { width: 400px; height: 400px; background: rgba(99,102,241,0.3); top: -10%; left: -10%; animation: float 15s ease infinite; }
+    .orb-2 { width: 300px; height: 300px; background: rgba(139,92,246,0.2); bottom: -10%; right: -5%; animation: float 18s ease infinite reverse; }
+    .orb-3 { width: 200px; height: 200px; background: rgba(59,130,246,0.2); top: 30%; right: 20%; animation: float 12s ease infinite; }
+
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+      animation: slideUp 0.6s ease;
+    }
+    .auth-brand {
+      text-align: center;
+      margin-bottom: var(--sp-2xl);
+    }
+    .auth-brand .logo-icon {
+      width: 60px; height: 60px;
+      background: var(--gradient);
+      border-radius: var(--radius-lg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: var(--sp-md);
+      box-shadow: var(--shadow-glow);
+    }
+    .auth-brand h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: var(--sp-xs);
+    }
+    .auth-brand p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .auth-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: var(--sp-2xl);
+      box-shadow: var(--shadow-xl);
+    }
+    .auth-tabs {
+      display: flex;
+      background: rgba(255,255,255,0.05);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: var(--sp-xl);
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 0.7rem;
+      text-align: center;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      cursor: pointer;
+      background: transparent;
+    }
+    .auth-tab.active {
+      background: var(--gradient);
+      color: #fff;
+      box-shadow: var(--shadow-glow);
+    }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; animation: fadeIn 0.3s ease; }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: var(--sp-xl);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .auth-footer a {
+      color: var(--accent-light);
+      font-weight: 500;
+    }
+
+    .form-alert {
+      padding: var(--sp-md);
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      margin-bottom: var(--sp-lg);
+      display: none;
+    }
+    .form-alert.show { display: flex; align-items: center; gap: var(--sp-sm); }
+    .form-alert.error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .form-alert.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+
+    .password-toggle {
+      position: relative;
+    }
+    .password-toggle .toggle-pw {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <!-- Animated orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="auth-container">
+      <!-- Branding -->
+      <div class="auth-brand">
+        <div class="logo-icon">📚</div>
+        <h1><span class="gradient-text">TOEFL Mastery</span></h1>
+        <p>Your gateway to TOEFL excellence</p>
+      </div>
+
+      <!-- Auth Card -->
+      <div class="auth-card">
+        <!-- Tabs -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="register">Sign Up</button>
+        </div>
+
+        <!-- Alert -->
+        <div id="authAlert" class="form-alert">
+          <span id="authAlertIcon">⚠️</span>
+          <span id="authAlertMsg"></span>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form active">
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email Address</label>
+            <input class="form-input" type="email" id="loginEmail" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <div class="password-toggle">
+              <input class="form-input" type="password" id="loginPassword" placeholder="••••••••" required />
+              <button type="button" class="toggle-pw" onclick="togglePassword('loginPassword', this)">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+            Sign In
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="regName">Full Name</label>
+            <input class="form-input" type="text" id="regName" placeholder="Your full name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="regEmail">Email Address</label>
+            <input class="form-input" type="email" id="regEmail" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="regPassword">Password</label>
+            <div class="password-toggle">
+              <input class="form-input" type="password" id="regPassword" placeholder="Min. 6 characters" required minlength="6" />
+              <button type="button" class="toggle-pw" onclick="togglePassword('regPassword', this)">👁️</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="regConfirm">Confirm Password</label>
+            <div class="password-toggle">
+              <input class="form-input" type="password" id="regConfirm" placeholder="••••••••" required />
+              <button type="button" class="toggle-pw" onclick="togglePassword('regConfirm', this)">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
+            Create Account
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          <p id="footerLogin">Don't have an account? <a href="#" onclick="switchTab('register')">Sign up</a></p>
+          <p id="footerRegister" style="display:none">Already have an account? <a href="#" onclick="switchTab('login')">Sign in</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Redirect if already logged in
+    auth.redirectIfLoggedIn();
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.auth-tab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const footerLogin = document.getElementById('footerLogin');
+    const footerRegister = document.getElementById('footerRegister');
+
+    function switchTab(tab) {
+      hideAlert();
+      tabs.forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      if (tab === 'login') {
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        footerLogin.style.display = '';
+        footerRegister.style.display = 'none';
+      } else {
+        registerForm.classList.add('active');
+        loginForm.classList.remove('active');
+        footerRegister.style.display = '';
+        footerLogin.style.display = 'none';
+      }
+    }
+    tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+    // Alert
+    function showAlert(msg, type = 'error') {
+      const el = document.getElementById('authAlert');
+      const icon = document.getElementById('authAlertIcon');
+      const msgEl = document.getElementById('authAlertMsg');
+      el.className = 'form-alert show ' + type;
+      icon.textContent = type === 'error' ? '⚠️' : '✅';
+      msgEl.textContent = msg;
+    }
+    function hideAlert() {
+      document.getElementById('authAlert').classList.remove('show');
+    }
+
+    // Password toggle
+    function togglePassword(id, btn) {
+      const inp = document.getElementById(id);
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+      else { inp.type = 'password'; btn.textContent = '👁️'; }
+    }
+
+    // Loading button state
+    function setLoading(btn, loading) {
+      if (loading) { btn.classList.add('loading'); btn.disabled = true; }
+      else { btn.classList.remove('loading'); btn.disabled = false; }
+    }
+
+    // Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const btn = document.getElementById('loginBtn');
+      setLoading(btn, true);
+      try {
+        await auth.handleLogin(
+          document.getElementById('loginEmail').value.trim(),
+          document.getElementById('loginPassword').value
+        );
+      } catch (err) {
+        showAlert(err.message);
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    // Register
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const pw = document.getElementById('regPassword').value;
+      const confirm = document.getElementById('regConfirm').value;
+      if (pw !== confirm) { showAlert('Passwords do not match.'); return; }
+      if (pw.length < 6) { showAlert('Password must be at least 6 characters.'); return; }
+
+      const btn = document.getElementById('registerBtn');
+      setLoading(btn, true);
+      try {
+        await auth.handleRegister(
+          document.getElementById('regName').value.trim(),
+          document.getElementById('regEmail').value.trim(),
+          pw
+        );
+      } catch (err) {
+        showAlert(err.message);
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>
