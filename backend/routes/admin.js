@@ -25,7 +25,7 @@ router.get('/courses', async (req, res) => {
 // POST /api/admin/courses — Create course
 router.post('/courses', async (req, res) => {
   try {
-    const { title, description, is_published } = req.body;
+    const { title, description, is_published, is_free } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required.' });
@@ -33,10 +33,10 @@ router.post('/courses', async (req, res) => {
 
     const id = uuidv4();
     const result = await pool.query(
-      `INSERT INTO Courses (id, title, description, is_published)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO Courses (id, title, description, is_published, is_free)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [id, title, description || null, is_published || false]
+      [id, title, description || null, is_published || false, is_free || false]
     );
 
     res.status(201).json({ message: 'Course created.', course: result.rows[0] });
@@ -46,20 +46,21 @@ router.post('/courses', async (req, res) => {
   }
 });
 
-// PUT /api/admin/courses/:id — Update course
+// /api/admin/courses/:id — Update course
 router.put('/courses/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, is_published } = req.body;
+    const { title, description, is_published, is_free } = req.body;
 
     const result = await pool.query(
       `UPDATE Courses SET
          title = COALESCE($1, title),
          description = COALESCE($2, description),
-         is_published = COALESCE($3, is_published)
-       WHERE id = $4
+         is_published = COALESCE($3, is_published),
+         is_free = COALESCE($4, is_free)
+       WHERE id = $5
        RETURNING *`,
-      [title, description, is_published, id]
+      [title, description, is_published, is_free, id]
     );
 
     if (result.rows.length === 0) {

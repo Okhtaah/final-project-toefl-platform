@@ -2,6 +2,49 @@
    TOEFL Platform — Admin Styles
    ============================================ */
 
+/* ---------- Admin Layout ---------- */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+.admin-main {
+  flex: 1;
+  padding: var(--sp-xl);
+  margin-left: 260px;
+  min-height: 100vh;
+  transition: var(--transition);
+}
+@media (max-width: 768px) {
+  .admin-main { margin-left: 0; padding: var(--sp-md); padding-top: 70px; }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-2xl);
+}
+
+.section-card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-xl);
+  transition: var(--transition);
+  margin-bottom: var(--sp-lg);
+}
+.section-card:hover {
+  border-color: var(--border-hover);
+}
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: var(--sp-lg);
+  color: var(--text-primary);
+}
+
 /* ---------- Admin Stats ---------- */
 .admin-stats {
   display: grid;

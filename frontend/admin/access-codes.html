@@ -134,7 +134,7 @@ document.getElementById('generate-form').onsubmit = async (e) => {
     expires_at:  document.getElementById('g-expires').value || null,
   };
   try {
-    const data = await api.post('/api/access-codes', body);
+    const data = await api.post('/access-codes', body);
     const code = data.code || data.access_code?.code || 'GENERATED';
     document.getElementById('generated-code').textContent = code;
     document.getElementById('generated-display').style.display = '';
@@ -150,7 +150,7 @@ function copyCode() {
 async function loadCodes() {
   const el = document.getElementById('codes-table');
   try {
-    const data = await api.get('/api/access-codes');
+    const data = await api.get('/access-codes');
     allCodes = data.codes || data;
     renderCodes(allCodes);
   } catch(e) { el.innerHTML = '<p style="color:var(--error)">Failed to load codes.</p>'; }
@@ -184,7 +184,7 @@ function filterCodes() {
 
 async function deleteCode(id) {
   if (!confirm('Delete this access code?')) return;
-  try { await api.delete(`/api/access-codes/${id}`); loadCodes(); }
+  try { await api.delete(`/access-codes/${id}`); loadCodes(); }
   catch(e) { alert('Failed to delete.'); }
 }
 

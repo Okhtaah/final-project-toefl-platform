@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — TOEFL Mastery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Mobile Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle"><span></span></button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="sidebar-nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="dashboard.html#coursesSection" class="sidebar-nav-item">
+          <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="materials.html" class="sidebar-nav-item">
+          <span class="nav-icon">📂</span> Study Materials
+        </a>
+        <a href="messages.html" class="sidebar-nav-item">
+          <span class="nav-icon">💬</span> Messages
+        </a>
+        <a href="profile.html" class="sidebar-nav-item active">
+          <span class="nav-icon">👤</span> Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-block" onclick="auth.logout()">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header animate-in">
+        <h2>👤 Profile</h2>
+        <p>Manage your account settings</p>
+      </div>
+
+      <div class="card animate-in" style="max-width:550px; margin-top: 1.5rem;">
+        <div class="flex gap-lg" style="align-items:center; margin-bottom: var(--sp-xl);">
+          <div class="avatar avatar-lg" id="profileAvatar" style="width: 70px; height: 70px; border-radius: 50%; background: var(--gradient); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: white;">?</div>
+          <div>
+            <h3 id="profileName" style="font-size:1.5rem; font-weight:700">—</h3>
+            <p class="body-sm text-muted" id="profileEmail" style="opacity:0.75">—</p>
+          </div>
+        </div>
+        <div class="divider" style="height:1px; background:var(--border); margin: var(--sp-lg) 0;"></div>
+        
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" id="profileNameInput" placeholder="Enter your full name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="profileEmailInput" disabled style="opacity: 0.6; cursor: not-allowed;" />
+        </div>
+        <button class="btn btn-primary" onclick="updateProfile()" id="saveBtn" style="margin-top: 1rem;">Save Changes</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;"></div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    if (!auth.requireRole('student')) throw new Error('redirect');
+
+    const user = auth.getUser();
+
+    // Fill fields
+    document.getElementById('profileAvatar').textContent = (user.name || '?')[0].toUpperCase();
+    document.getElementById('profileName').textContent = user.name || '';
+    document.getElementById('profileEmail').textContent = user.email || '';
+    document.getElementById('profileNameInput').value = user.name || '';
+    document.getElementById('profileEmailInput').value = user.email || '';
+
+    // Sidebar Mobile Toggle
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+
+    function showToast(msg, type = 'success') {
+      const c = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.textContent = msg;
+      t.style.background = type === 'success' ? 'var(--success)' : 'var(--error)';
+      t.style.padding = '0.75rem 1.25rem';
+      t.style.borderRadius = '8px';
+      t.style.color = '#fff';
+      t.style.fontSize = '0.9rem';
+      t.style.fontWeight = '500';
+      t.style.boxShadow = 'var(--shadow-md)';
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    async function updateProfile() {
+      const name = document.getElementById('profileNameInput').value.trim();
+      if (!name) return alert('Name is required.');
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        const res = await api.put('/auth/profile', { full_name: name });
+        // Update local session
+        user.name = name;
+        localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
+        document.getElementById('profileName').textContent = name;
+        document.getElementById('profileAvatar').textContent = name[0].toUpperCase();
+        showToast('Profile updated successfully!');
+      } catch (err) {
+        showToast(err.message || 'Failed to update profile.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+      }
+    }
+  </script>
+</body>
+</html>

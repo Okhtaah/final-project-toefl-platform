@@ -5,6 +5,31 @@ const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
 
 // ============================================
+// GET /api/messages/search — Search for users to message
+// Query: ?query=<email_or_name>
+// ============================================
+router.get('/search', authenticate, async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required.' });
+    }
+    const currentUserId = req.user.id;
+    const result = await pool.query(
+      `SELECT id, full_name, email, role 
+       FROM Users 
+       WHERE (email ILIKE $1 OR full_name ILIKE $1) AND id != $2
+       LIMIT 10`,
+      [`%${query}%`, currentUserId]
+    );
+    res.json({ users: result.rows });
+  } catch (err) {
+    console.error('Search users error:', err);
+    res.status(500).json({ error: 'Failed to search users.' });
+  }
+});
+
+// ============================================
 // GET /api/messages — Get conversation with another user
 // Query: ?with=<user_id>
 // ============================================

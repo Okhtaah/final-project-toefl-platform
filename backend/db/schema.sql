@@ -40,7 +40,8 @@ CREATE TABLE Courses (
     id VARCHAR(36) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    is_published BOOLEAN DEFAULT FALSE
+    is_published BOOLEAN DEFAULT FALSE,
+    is_free BOOLEAN DEFAULT FALSE
 );
 
 -- ============================================

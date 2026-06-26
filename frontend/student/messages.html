@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Messages — TOEFL Mastery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <style>
+    .messages-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      height: calc(100vh - 150px);
+    }
+    .threads-sidebar {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-search-box {
+      padding: var(--sp-md);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 12px;
+      right: 12px;
+      background: #11111e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      z-index: 10;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .search-result-item {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.15s;
+    }
+    .search-result-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    .thread-item {
+      padding: 1rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .thread-item:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .thread-item.active {
+      background: rgba(99,102,241,0.12);
+      border-left: 3px solid var(--accent);
+    }
+    .thread-details {
+      flex: 1;
+      min-width: 0;
+    }
+    .thread-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+    .thread-preview {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .unread-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-left: 0.5rem;
+    }
+
+    .chat-area {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(255,255,255,0.01);
+    }
+    .chat-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .msg-bubble {
+      max-width: 70%;
+      padding: 0.75rem 1rem;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .msg-bubble.sent {
+      align-self: flex-end;
+      background: var(--gradient);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-bubble.recv {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.07);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      text-align: right;
+    }
+    .msg-time.recv-time {
+      text-align: left;
+    }
+    .chat-input-area {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.75rem;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      resize: none;
+      max-height: 80px;
+      overflow-y: auto;
+      transition: border-color 0.2s;
+    }
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .empty-chat {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+      .messages-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .threads-sidebar {
+        max-height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Mobile Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle"><span></span></button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="sidebar-nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="dashboard.html#coursesSection" class="sidebar-nav-item">
+          <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="materials.html" class="sidebar-nav-item">
+          <span class="nav-icon">📂</span> Study Materials
+        </a>
+        <a href="messages.html" class="sidebar-nav-item active">
+          <span class="nav-icon">💬</span> Messages
+        </a>
+        <a href="profile.html" class="sidebar-nav-item">
+          <span class="nav-icon">👤</span> Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-block" onclick="auth.logout()">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header animate-in">
+        <h2>💬 Messages</h2>
+        <p>Chat with instructors or other students</p>
+      </div>
+
+      <div class="messages-layout animate-in">
+        <!-- Sidebar -->
+        <div class="threads-sidebar">
+          <div class="sidebar-search-box">
+            <input type="text" id="user-search-input" class="form-input" placeholder="Search user by email or name..." autocomplete="off" />
+            <div id="search-results-list" class="search-results" style="display:none"></div>
+          </div>
+          <div style="flex:1;overflow-y:auto" id="threads-list">
+            <div style="padding:1rem;color:var(--text-muted);font-size:0.85rem">Loading conversations...</div>
+          </div>
+        </div>
+
+        <!-- Chat View -->
+        <div class="chat-area" id="chat-area">
+          <div class="empty-chat">
+            <span style="font-size:3rem">💬</span>
+            <p>Search a user or select a chat to begin messaging</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    if (!auth.requireRole('student')) throw new Error('redirect');
+
+    let currentPartner = null;
+    let pollInterval = null;
+    let conversations = [];
+
+    // Sidebar Mobile Toggle
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+
+    // Search user input event
+    const searchInput = document.getElementById('user-search-input');
+    const resultsList = document.getElementById('search-results-list');
+
+    let searchTimeout = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const query = searchInput.value.trim();
+      if (!query) {
+        resultsList.style.display = 'none';
+        return;
+      }
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await api.get(`/messages/search?query=${encodeURIComponent(query)}`);
+          const users = res.users || [];
+          if (users.length === 0) {
+            resultsList.innerHTML = '<div class="search-result-item" style="color:var(--text-muted)">No users found</div>';
+          } else {
+            resultsList.innerHTML = users.map(u => `
+              <div class="search-result-item" onclick="startNewChat(${JSON.stringify(u).replace(/"/g, '&quot;')})">
+                <strong>${u.full_name}</strong> <span style="font-size:0.75rem;opacity:0.7">(${u.email})</span>
+              </div>
+            `).join('');
+          }
+          resultsList.style.display = 'block';
+        } catch (err) {
+          console.error(err);
+        }
+      }, 300);
+    });
+
+    // Hide search results on click outside
+    document.addEventListener('click', (e) => {
+      if (e.target !== searchInput) {
+        resultsList.style.display = 'none';
+      }
+    });
+
+    // Load conversation list
+    async function loadConversations() {
+      const el = document.getElementById('threads-list');
+      try {
+        const res = await api.get('/messages');
+        conversations = res.conversations || [];
+        if (!conversations.length) {
+          el.innerHTML = '<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem">No active conversations. Search above to start one!</div>';
+          return;
+        }
+        el.innerHTML = conversations.map(c => {
+          const isActive = currentPartner?.id === c.partner.id;
+          return `
+            <div class="thread-item ${isActive ? 'active' : ''}" onclick="selectConversation(${JSON.stringify(c.partner).replace(/"/g, '&quot;')})">
+              <div class="thread-details">
+                <div class="thread-name">${c.partner.full_name}</div>
+                <div class="thread-preview">${c.last_message?.content || 'No messages yet'}</div>
+              </div>
+              ${(c.last_message?.sender_id !== auth.getUser().id && !c.last_message?.is_read) ? '<span class="unread-dot"></span>' : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        el.innerHTML = '<div style="padding:1rem;color:var(--error);font-size:0.85rem">Failed to load conversations.</div>';
+      }
+    }
+
+    function startNewChat(partner) {
+      searchInput.value = '';
+      resultsList.style.display = 'none';
+      selectConversation(partner);
+    }
+
+    function selectConversation(partner) {
+      currentPartner = partner;
+      document.querySelectorAll('.thread-item').forEach(el => el.classList.remove('active'));
+      loadConversations(); // Redraw with active state
+
+      const chatArea = document.getElementById('chat-area');
+      chatArea.innerHTML = `
+        <div class="chat-header">
+          <div class="chat-avatar">${partner.full_name[0].toUpperCase()}</div>
+          <div>
+            <div style="font-weight:600">${partner.full_name}</div>
+            <div style="font-size:0.75rem;opacity:0.7">${partner.email}</div>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages-container">
+          <div style="text-align:center;color:var(--text-muted)">Loading conversation...</div>
+        </div>
+        <div class="chat-input-area">
+          <textarea class="chat-input" id="chat-textarea" placeholder="Type a message..." rows="1"></textarea>
+          <button class="btn btn-primary" onclick="postMessage()">Send</button>
+        </div>
+      `;
+
+      // Auto-focus textarea
+      const tx = document.getElementById('chat-textarea');
+      tx.focus();
+      tx.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          postMessage();
+        }
+      });
+
+      loadMessages();
+
+      // Setup Polling every 4 seconds
+      clearInterval(pollInterval);
+      pollInterval = setInterval(loadMessages, 4000);
+    }
+
+    async function loadMessages() {
+      if (!currentPartner) return;
+      const container = document.getElementById('chat-messages-container');
+      if (!container) return;
+
+      try {
+        const res = await api.get(`/messages?with=${currentPartner.id}`);
+        const messages = res.messages || [];
+
+        // Save scroll height to detect if user was scrolled to bottom
+        const isScrolledToBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+
+        if (messages.length === 0) {
+          container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.85rem">No messages yet. Say hello! 👋</div>';
+          return;
+        }
+
+        container.innerHTML = messages.map(m => {
+          const isSent = m.sender_id === auth.getUser().id;
+          const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return `
+            <div class="msg-bubble ${isSent ? 'sent' : 'recv'}">
+              <div>${escapeHTML(m.content)}</div>
+              <div class="msg-time ${isSent ? '' : 'recv-time'}">${time}</div>
+            </div>
+          `;
+        }).join('');
+
+        if (isScrolledToBottom || container.innerHTML.includes('Loading conversation...')) {
+          container.scrollTop = container.scrollHeight;
+        }
+
+        // Mark unread messages as read
+        messages.forEach(async (m) => {
+          if (m.receiver_id === auth.getUser().id && !m.is_read) {
+            try { await api.put(`/messages/${m.id}/read`); } catch (err) {}
+          }
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function postMessage() {
+      const tx = document.getElementById('chat-textarea');
+      const content = tx.value.trim();
+      if (!content || !currentPartner) return;
+
+      tx.value = '';
+      try {
+        await api.post('/messages', {
+          receiver_id: currentPartner.id,
+          content: content
+        });
+        loadMessages();
+        loadConversations();
+      } catch (err) {
+        alert('Failed to send message: ' + err.message);
+      }
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // Initial Load
+    loadConversations();
+  </script>
+</body>
+</html>

@@ -22,13 +22,16 @@
         <a href="dashboard.html" class="sidebar-nav-item active">
           <span class="nav-icon">📊</span> Dashboard
         </a>
-        <a href="#courses" class="sidebar-nav-item" id="navCourses" onclick="scrollToSection('coursesSection')">
+        <a href="#coursesSection" class="sidebar-nav-item" id="navCourses" onclick="scrollToSection('coursesSection')">
           <span class="nav-icon">📚</span> My Courses
         </a>
-        <a href="#messages" class="sidebar-nav-item" id="navMessages" onclick="openMessages()">
+        <a href="materials.html" class="sidebar-nav-item">
+          <span class="nav-icon">📂</span> Study Materials
+        </a>
+        <a href="messages.html" class="sidebar-nav-item">
           <span class="nav-icon">💬</span> Messages
         </a>
-        <a href="#profile" class="sidebar-nav-item" id="navProfile" onclick="openProfile()">
+        <a href="profile.html" class="sidebar-nav-item">
           <span class="nav-icon">👤</span> Profile
         </a>
       </nav>
@@ -53,7 +56,7 @@
           <input type="text" class="form-input" id="accessCodeInput" placeholder="ENTER-CODE-HERE" maxlength="30" />
           <button class="btn btn-primary" id="redeemBtn" onclick="redeemCode()">Redeem</button>
         </div>
-        <div id="codeAlert" class="form-alert mt-sm" style="display:none;"></div>
+        <div id="codeAlert" class="form-alert mt-sm" style="display:none; padding: 0.5rem 1rem; border-radius: 6px; font-size:0.85rem;"></div>
       </div>
 
       <!-- Courses -->
@@ -89,56 +92,14 @@
           <p>No test attempts yet. Start a practice test!</p>
         </div>
       </section>
-
-      <!-- Messages Section -->
-      <section class="mt-xl hidden" id="messagesSection">
-        <div class="page-header">
-          <h2>💬 Messages</h2>
-          <p>Chat with your instructor</p>
-        </div>
-        <div class="card" style="min-height:400px;">
-          <div id="messagesList" class="conversation-messages" style="min-height:300px;max-height:400px;overflow-y:auto;margin-bottom:var(--sp-md);"></div>
-          <div class="conversation-input">
-            <input type="text" class="form-input" id="msgInput" placeholder="Type your message..." />
-            <button class="btn btn-primary" onclick="sendMessage()">Send</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Profile Section -->
-      <section class="mt-xl hidden" id="profileSection">
-        <div class="page-header">
-          <h2>👤 Profile</h2>
-          <p>Your account details</p>
-        </div>
-        <div class="card" style="max-width:500px;">
-          <div class="flex gap-lg" style="align-items:center;margin-bottom:var(--sp-xl);">
-            <div class="avatar avatar-lg" id="profileAvatar">?</div>
-            <div>
-              <h3 id="profileName">—</h3>
-              <p class="body-sm text-muted" id="profileEmail">—</p>
-            </div>
-          </div>
-          <div class="divider"></div>
-          <div class="form-group">
-            <label class="form-label">Name</label>
-            <input type="text" class="form-input" id="profileNameInput" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-input" id="profileEmailInput" disabled />
-          </div>
-          <button class="btn btn-primary" onclick="updateProfile()">Save Changes</button>
-        </div>
-      </section>
     </main>
-
-    <!-- WhatsApp FAB -->
-    <a href="https://wa.me/+201234567890" target="_blank" class="fab-whatsapp" data-tooltip="Chat on WhatsApp">💬</a>
   </div>
 
+  <!-- WhatsApp FAB outside page-wrapper at bottom-right -->
+  <a href="https://wa.me/+201234567890" target="_blank" class="fab-whatsapp" data-tooltip="Chat on WhatsApp">💬</a>
+
   <!-- Toast container -->
-  <div class="toast-container" id="toastContainer"></div>
+  <div class="toast-container" id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;"></div>
 
   <script src="../js/config.js"></script>
   <script src="../js/api.js"></script>
@@ -151,11 +112,6 @@
 
     // Welcome
     document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.name || 'Student'}! 👋`;
-    document.getElementById('profileAvatar').textContent = (user.name || '?')[0].toUpperCase();
-    document.getElementById('profileName').textContent = user.name || '';
-    document.getElementById('profileEmail').textContent = user.email || '';
-    document.getElementById('profileNameInput').value = user.name || '';
-    document.getElementById('profileEmailInput').value = user.email || '';
 
     // Sidebar mobile
     document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -173,27 +129,30 @@
       const t = document.createElement('div');
       t.className = 'toast ' + type;
       t.textContent = msg;
+      t.style.background = type === 'success' ? 'var(--success)' : 'var(--error)';
+      t.style.padding = '0.75rem 1.25rem';
+      t.style.borderRadius = '8px';
+      t.style.color = '#fff';
+      t.style.fontSize = '0.9rem';
+      t.style.fontWeight = '500';
       c.appendChild(t);
       setTimeout(() => t.remove(), 3000);
     }
 
     // Section nav helpers
     function scrollToSection(id) {
-      document.querySelectorAll('section[id]').forEach(s => s.classList.remove('hidden'));
-      document.getElementById('messagesSection').classList.add('hidden');
-      document.getElementById('profileSection').classList.add('hidden');
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+      const target = document.getElementById(id);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-    function openMessages() {
-      document.getElementById('messagesSection').classList.remove('hidden');
-      document.getElementById('profileSection').classList.add('hidden');
-      document.getElementById('messagesSection').scrollIntoView({ behavior: 'smooth' });
-      loadMessages();
-    }
-    function openProfile() {
-      document.getElementById('profileSection').classList.remove('hidden');
-      document.getElementById('messagesSection').classList.add('hidden');
-      document.getElementById('profileSection').scrollIntoView({ behavior: 'smooth' });
+
+    function focusAccessCode() {
+      const input = document.getElementById('accessCodeInput');
+      if (input) {
+        input.scrollIntoView({ behavior: 'smooth' });
+        input.focus();
+      }
     }
 
     // ---- Load Courses ----
@@ -208,15 +167,17 @@
           return;
         }
         courses.forEach((c, i) => {
-          const isLocked = !c.isEnrolled && !c.unlocked;
+          const isLocked = !c.is_free && !c.is_enrolled;
           grid.innerHTML += `
             <div class="card course-card ${isLocked ? 'locked' : ''} animate-in" style="animation-delay:${i * 0.1}s">
-              <div class="course-img">${getCourseLogo(c.title || c.name)}</div>
-              <div class="course-title">${c.title || c.name || 'Course'}</div>
+              <div class="course-img">${getCourseLogo(c.title)}</div>
+              <div class="course-title">${c.title || 'Course'}</div>
               <div class="course-desc">${c.description || 'No description.'}</div>
               <div class="flex-between mt-md">
                 <span class="badge ${isLocked ? 'badge-neutral' : 'badge-success'}">${isLocked ? '🔒 Locked' : '✅ Enrolled'}</span>
-                ${!isLocked ? `<a href="test.html?courseId=${c._id}" class="btn btn-sm btn-primary">Start Practice</a>` : ''}
+                ${!isLocked 
+                  ? `<a href="test.html?courseId=${c.id}" class="btn btn-sm btn-primary">Start Practice</a>` 
+                  : `<button onclick="focusAccessCode()" class="btn btn-sm btn-secondary">Unlock</button>`}
               </div>
             </div>`;
         });
@@ -239,27 +200,40 @@
     // ---- Load Attempts ----
     async function loadAttempts() {
       try {
-        const data = await api.get('/submissions/my');
-        const attempts = data.submissions || data.data || data || [];
+        const data = await api.get('/attempts/my');
+        const attempts = data.attempts || [];
         const list = document.getElementById('attemptsList');
+        const emptyState = document.getElementById('attemptsEmpty');
         list.innerHTML = '';
         if (!attempts.length) {
-          document.getElementById('attemptsEmpty').classList.remove('hidden');
+          emptyState.classList.remove('hidden');
           return;
         }
+        emptyState.classList.add('hidden');
         attempts.slice(0, 10).forEach((a, i) => {
-          const date = new Date(a.createdAt || a.submittedAt).toLocaleDateString();
-          const score = a.score != null ? a.score : '—';
-          const status = a.status || (a.score != null ? 'graded' : 'pending');
+          const date = new Date(a.start_time).toLocaleDateString();
+          const score = a.total_score != null ? Math.round(a.total_score) : '—';
+          const status = a.status === 'GRADED' ? 'graded' : (a.status === 'SUBMITTED' ? 'submitted' : 'in_progress');
+          
+          let badgeClass = 'badge-neutral';
+          let statusText = '⏳ In Progress';
+          if (status === 'graded') {
+            badgeClass = 'badge-success';
+            statusText = '✅ Graded';
+          } else if (status === 'submitted') {
+            badgeClass = 'badge-warning';
+            statusText = '⏳ Under Review';
+          }
+
           list.innerHTML += `
-            <div class="card flex-between animate-in" style="animation-delay:${i * 0.08}s;padding:var(--sp-lg);">
+            <div class="card flex-between animate-in" style="animation-delay:${i * 0.08}s;padding:var(--sp-lg);margin-bottom:12px;">
               <div>
-                <div class="heading-4">${a.taskTitle || a.task?.title || 'Test'}</div>
-                <div class="body-sm text-muted">${date}</div>
+                <div class="heading-4" style="font-weight:600; font-size:1rem;">${a.course_title || 'TOEFL Practice Test'}</div>
+                <div class="body-sm text-muted" style="margin-top:2px;">${date}</div>
               </div>
               <div class="flex gap-md" style="align-items:center;">
-                <span class="badge ${status === 'graded' ? 'badge-success' : 'badge-warning'}">${status === 'graded' ? '✅ Graded' : '⏳ Pending'}</span>
-                <div class="heading-3">${score}<span class="body-sm text-muted">/30</span></div>
+                <span class="badge ${badgeClass}">${statusText}</span>
+                <div class="heading-3" style="font-weight:700;">${score}<span class="body-sm text-muted" style="font-size:0.75rem;">/100</span></div>
               </div>
             </div>`;
         });
@@ -276,8 +250,8 @@
       if (!code) return;
       const btn = document.getElementById('redeemBtn');
       const alert = document.getElementById('codeAlert');
-      btn.classList.add('loading');
       btn.disabled = true;
+      alert.style.display = 'none';
       try {
         await api.post('/access-codes/redeem', { code });
         alert.className = 'form-alert mt-sm alert-success';
@@ -286,65 +260,14 @@
         showToast('Access code redeemed!');
         document.getElementById('accessCodeInput').value = '';
         loadCourses();
+        loadAttempts();
       } catch (e) {
         alert.className = 'form-alert mt-sm alert-error';
         alert.style.display = 'flex';
         alert.textContent = '⚠️ ' + e.message;
       } finally {
-        btn.classList.remove('loading');
         btn.disabled = false;
       }
-    }
-
-    // ---- Messages ----
-    async function loadMessages() {
-      try {
-        const data = await api.get('/messages');
-        const msgs = data.messages || data.data || data || [];
-        const list = document.getElementById('messagesList');
-        list.innerHTML = '';
-        if (!msgs.length) {
-          list.innerHTML = '<div class="empty-state"><p>No messages yet. Say hello!</p></div>';
-          return;
-        }
-        msgs.forEach(m => {
-          const isMine = m.sender === user._id || m.sender?._id === user._id;
-          const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          list.innerHTML += `
-            <div class="message-bubble ${isMine ? 'sent' : 'received'}">
-              ${m.content || m.text || m.message}
-              <div class="msg-time">${time}</div>
-            </div>`;
-        });
-        list.scrollTop = list.scrollHeight;
-      } catch (e) { console.error(e); }
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById('msgInput');
-      const text = input.value.trim();
-      if (!text) return;
-      try {
-        await api.post('/messages', { content: text });
-        input.value = '';
-        loadMessages();
-      } catch (e) { showToast(e.message, 'error'); }
-    }
-    document.getElementById('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
-
-    // ---- Profile ----
-    async function updateProfile() {
-      try {
-        const name = document.getElementById('profileNameInput').value.trim();
-        await api.put('/auth/profile', { name });
-        const u = auth.getUser();
-        u.name = name;
-        localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(u));
-        document.getElementById('welcomeMsg').textContent = `Welcome back, ${name}! 👋`;
-        document.getElementById('profileName').textContent = name;
-        document.getElementById('profileAvatar').textContent = name[0].toUpperCase();
-        showToast('Profile updated!');
-      } catch (e) { showToast(e.message, 'error'); }
     }
 
     // ---- Init ----

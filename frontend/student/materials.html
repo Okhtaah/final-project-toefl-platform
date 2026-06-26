@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Materials — TOEFL Mastery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <style>
+    .materials-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .material-card {
+      margin-bottom: 1.5rem;
+    }
+    .table-wrapper {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .table th, .table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .table th {
+      font-weight: 600;
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.02);
+    }
+    .table td {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-success {
+      background: rgba(16,185,129,0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16,185,129,0.3);
+    }
+    .badge-neutral {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .badge-accent {
+      background: rgba(99,102,241,0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99,102,241,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Mobile Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle"><span></span></button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand"><span class="gradient-text">TOEFL Mastery</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="sidebar-nav-item">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="dashboard.html#coursesSection" class="sidebar-nav-item">
+          <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="materials.html" class="sidebar-nav-item active">
+          <span class="nav-icon">📂</span> Study Materials
+        </a>
+        <a href="messages.html" class="sidebar-nav-item">
+          <span class="nav-icon">💬</span> Messages
+        </a>
+        <a href="profile.html" class="sidebar-nav-item">
+          <span class="nav-icon">👤</span> Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-block" onclick="auth.logout()">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <div class="page-header animate-in">
+        <h2>📂 Study Materials & PDFs</h2>
+        <p>Access and download study resources for your courses</p>
+      </div>
+
+      <!-- Access Code Quick Redeem -->
+      <div class="card animate-in" style="margin-bottom: 2rem; margin-top: 1.5rem;">
+        <h3 style="margin-bottom: var(--sp-xs); font-size:1.15rem;">🔑 Redeem Access Code</h3>
+        <p class="body-sm text-muted" style="margin-bottom: var(--sp-md);">Have a code? Enter it to unlock courses or specific premium PDFs.</p>
+        <div class="flex gap-md" style="flex-wrap: wrap;">
+          <input type="text" class="form-input" id="accessCodeInput" placeholder="ENTER-CODE-HERE" maxlength="30" style="max-width:350px;" />
+          <button class="btn btn-primary" onclick="redeemCode()" id="redeemBtn">Redeem Code</button>
+        </div>
+        <div id="codeAlert" class="form-alert mt-sm" style="display:none; padding: 0.5rem 1rem; border-radius: 6px; font-size:0.85rem;"></div>
+      </div>
+
+      <!-- Materials List -->
+      <div id="materialsContainer" class="animate-in">
+        <div class="card skeleton skeleton-card" style="height: 120px; margin-bottom: 1.5rem;"></div>
+        <div class="card skeleton skeleton-card" style="height: 120px; margin-bottom: 1.5rem;"></div>
+      </div>
+
+      <div id="materialsEmpty" class="empty-state hidden">
+        <div class="empty-icon">📂</div>
+        <p>No study materials are currently available.</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+    if (!auth.requireRole('student')) throw new Error('redirect');
+
+    // Sidebar Mobile Toggle
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    });
+
+    async function loadMaterials() {
+      const container = document.getElementById('materialsContainer');
+      const emptyState = document.getElementById('materialsEmpty');
+      container.innerHTML = '<div class="card skeleton skeleton-card" style="height: 120px; margin-bottom: 1.5rem;"></div>';
+      emptyState.classList.add('hidden');
+
+      try {
+        const data = await api.get('/courses');
+        const courses = data.courses || data.data || data || [];
+        
+        container.innerHTML = '';
+        let hasAnyMaterials = false;
+
+        // Loop through all courses to load materials
+        for (const c of courses) {
+          // Note: All courses are shown on the student dashboard.
+          // Students can access free materials in any course, or premium materials if they are enrolled/unlocked.
+          
+          let matData;
+          try {
+            matData = await api.get(`/courses/${c.id}/materials`);
+          } catch (matErr) {
+            console.error(`Failed to fetch materials for course ${c.id}`, matErr);
+            continue;
+          }
+
+          const materials = matData.materials || [];
+          if (materials.length > 0) {
+            hasAnyMaterials = true;
+            
+            const courseBlock = document.createElement('div');
+            courseBlock.className = 'card material-card animate-in';
+            courseBlock.innerHTML = `
+              <h3 style="margin-bottom: var(--sp-xs); font-size: 1.25rem;">📚 ${c.title}</h3>
+              <p class="body-xs text-muted" style="margin-bottom: 1rem;">${c.description || 'Study resources for this course.'}</p>
+              
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Material Title</th>
+                      <th>Type</th>
+                      <th>Access Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${materials.map(m => {
+                      const canDownload = m.is_free || m.has_access;
+                      const hostUrl = CONFIG.API_URL.replace('/api', '');
+                      const fileLink = canDownload 
+                        ? (m.file_url.startsWith('http') ? m.file_url : `${hostUrl}${m.file_url}`) 
+                        : '#';
+                        
+                      return `
+                        <tr>
+                          <td style="font-weight: 500;">📄 ${m.title}</td>
+                          <td><span class="badge badge-neutral">${m.material_type}</span></td>
+                          <td>
+                            <span class="badge ${m.is_free ? 'badge-success' : (m.has_access ? 'badge-accent' : 'badge-neutral')}">
+                              ${m.is_free ? '🆓 Free' : (m.has_access ? '🔑 Unlocked' : '🔒 Premium')}
+                            </span>
+                          </td>
+                          <td>
+                            ${canDownload 
+                              ? `<a href="${fileLink}" target="_blank" class="btn btn-sm btn-primary">Download</a>`
+                              : `<button onclick="focusAccessCode()" class="btn btn-sm btn-secondary" style="opacity:0.6">Unlock</button>`}
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+            container.appendChild(courseBlock);
+          }
+        }
+
+        if (!hasAnyMaterials) {
+          emptyState.classList.remove('hidden');
+          container.innerHTML = '';
+        }
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = `<div class="alert alert-error">Failed to load study materials.</div>`;
+      }
+    }
+
+    function focusAccessCode() {
+      const input = document.getElementById('accessCodeInput');
+      input.scrollIntoView({ behavior: 'smooth' });
+      input.focus();
+    }
+
+    async function redeemCode() {
+      const input = document.getElementById('accessCodeInput');
+      const btn = document.getElementById('redeemBtn');
+      const alertEl = document.getElementById('codeAlert');
+      const code = input.value.trim();
+
+      if (!code) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      alertEl.style.display = 'none';
+
+      try {
+        const res = await api.post('/access-codes/redeem', { code });
+        alertEl.textContent = res.message || 'Access granted successfully!';
+        alertEl.className = 'form-alert show success';
+        alertEl.style.display = 'block';
+        input.value = '';
+        
+        // Reload materials and list
+        loadMaterials();
+      } catch (err) {
+        alertEl.textContent = err.message || 'Failed to redeem code.';
+        alertEl.className = 'form-alert show error';
+        alertEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Redeem Code';
+      }
+    }
+
+    // Load materials on init
+    loadMaterials();
+  </script>
+</body>
+</html>
