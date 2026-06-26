@@ -535,12 +535,42 @@ async function advanceSection() {
   // Submit current section answers
   try {
     const sec = sections[curSection];
-    const payload = Object.entries(answers[sec.id] || {}).map(([qId, ans]) => ({
-      question_id: qId,
-      text_response: typeof ans === 'string' ? ans : (ans?.url ? null : JSON.stringify(ans)),
-    }));
+    const answersForSection = answers[sec.id] || {};
+    const payload = [];
+
+    // Show a loading/uploading indicator
+    const submitBtn = document.getElementById('submit-section-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading...';
+    }
+
+    for (const [qId, ans] of Object.entries(answersForSection)) {
+      if (ans && ans.type === 'audio' && ans.blob) {
+        try {
+          const fd = new FormData();
+          fd.append('file', ans.blob, 'response.webm');
+          const uploadRes = await api.upload('/upload', fd);
+          payload.push({
+            question_id: qId,
+            audio_response_url: uploadRes.fileUrl,
+            text_response: null
+          });
+        } catch (uploadErr) {
+          console.error('Audio upload failed for question', qId, uploadErr);
+        }
+      } else {
+        payload.push({
+          question_id: qId,
+          text_response: typeof ans === 'string' ? ans : JSON.stringify(ans),
+        });
+      }
+    }
+
     await api.post(`/attempts/${attemptId}/submit`, { section_id: sec.id, answers: payload });
-  } catch(e) { console.error('Submit error', e); }
+  } catch(e) { 
+    console.error('Submit error', e); 
+  }
   curSection++;
   if (curSection >= sections.length) { finishTest(); } else { renderSection(); }
 }

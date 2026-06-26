@@ -18,7 +18,7 @@ const api = (() => {
     localStorage.removeItem(CONFIG.TOKEN_KEY);
     localStorage.removeItem(CONFIG.USER_KEY);
     if (!window.location.pathname.endsWith('index.html') && !window.location.pathname.endsWith('/')) {
-      window.location.href = '/frontend/index.html';
+      window.location.href = '/index.html';
     }
   }
 

@@ -11,6 +11,7 @@ const accessCodeRoutes = require('./routes/access-codes');
 const attemptRoutes = require('./routes/attempts');
 const messageRoutes = require('./routes/messages');
 const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,7 @@ app.use('/api/access-codes', accessCodeRoutes);
 app.use('/api/attempts', attemptRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // ============================================
 // Health check
