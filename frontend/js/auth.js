@@ -31,13 +31,13 @@ const auth = (() => {
   function logout() {
     localStorage.removeItem(CONFIG.TOKEN_KEY);
     localStorage.removeItem(CONFIG.USER_KEY);
-    window.location.href = '/frontend/index.html';
+    window.location.href = '/index.html';
   }
 
   /* ---- guards ---- */
   function requireAuth() {
     if (!isLoggedIn()) {
-      window.location.href = '/frontend/index.html';
+      window.location.href = '/index.html';
       return false;
     }
     return true;
@@ -45,11 +45,10 @@ const auth = (() => {
 
   function requireRole(role) {
     if (!requireAuth()) return false;
-    if (getRole() !== role) {
-      // redirect to correct dashboard
-      const r = getRole();
-      if (r === 'admin')   window.location.href = '/frontend/admin/dashboard.html';
-      if (r === 'student') window.location.href = '/frontend/student/dashboard.html';
+    const r = getRole() || '';
+    if (r.toUpperCase() !== role.toUpperCase()) {
+      if (r === 'ADMIN')   window.location.href = '/admin/dashboard.html';
+      if (r === 'STUDENT') window.location.href = '/student/dashboard.html';
       return false;
     }
     return true;
@@ -58,25 +57,29 @@ const auth = (() => {
   function redirectIfLoggedIn() {
     if (isLoggedIn()) {
       const r = getRole();
-      if (r === 'admin')   window.location.href = '/frontend/admin/dashboard.html';
-      else                 window.location.href = '/frontend/student/dashboard.html';
+      if (r === 'ADMIN')   window.location.href = '/admin/dashboard.html';
+      else                 window.location.href = '/student/dashboard.html';
     }
   }
 
   /* ---- form handlers ---- */
   async function handleLogin(email, password) {
     const data = await api.post('/auth/login', { email, password });
-    saveSession(data.token, data.user || data.data?.user || data);
-    const role = (data.user || data.data?.user || data).role;
-    if (role === 'admin') window.location.href = '/frontend/admin/dashboard.html';
-    else                  window.location.href = '/frontend/student/dashboard.html';
+    const user = data.user || data;
+    saveSession(data.token, user);
+    if (user.role === 'ADMIN') window.location.href = '/admin/dashboard.html';
+    else                       window.location.href = '/student/dashboard.html';
   }
 
-  async function handleRegister(name, email, password) {
-    const data = await api.post('/auth/register', { name, email, password });
-    saveSession(data.token, data.user || data.data?.user || data);
-    window.location.href = '/frontend/student/dashboard.html';
+  async function handleRegister(full_name, email, password) {
+    const data = await api.post('/auth/register', { full_name, email, password });
+    const user = data.user || data;
+    saveSession(data.token, user);
+    window.location.href = '/student/dashboard.html';
   }
 
   return { getUser, getToken, isLoggedIn, getRole, saveSession, logout, requireAuth, requireRole, redirectIfLoggedIn, handleLogin, handleRegister };
 })();
+
+// Global logout function for onclick handlers
+function logout() { auth.logout(); }
