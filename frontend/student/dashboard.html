@@ -176,7 +176,7 @@
               <div class="flex-between mt-md">
                 <span class="badge ${isLocked ? 'badge-neutral' : 'badge-success'}">${isLocked ? '🔒 Locked' : '✅ Enrolled'}</span>
                 ${!isLocked 
-                  ? `<a href="test.html?courseId=${c.id}" class="btn btn-sm btn-primary">Start Practice</a>` 
+                  ? `<button onclick="startPractice(event, '${c.id}')" class="btn btn-sm btn-primary">Start Practice</button>` 
                   : `<button onclick="focusAccessCode()" class="btn btn-sm btn-secondary">Unlock</button>`}
               </div>
             </div>`;
@@ -241,6 +241,30 @@
         console.error(e);
         document.getElementById('attemptsList').innerHTML = '';
         document.getElementById('attemptsEmpty').classList.remove('hidden');
+      }
+    // ---- Start Practice Attempt ----
+    async function startPractice(event, courseId) {
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Starting...';
+      try {
+        let attemptId;
+        try {
+          const res = await api.post('/attempts/start', { course_id: courseId });
+          attemptId = res.attempt.id;
+        } catch (err) {
+          if (err.data && err.data.attempt_id) {
+            attemptId = err.data.attempt_id;
+          } else {
+            throw err;
+          }
+        }
+        window.location.href = `test.html?courseId=${courseId}&attemptId=${attemptId}`;
+      } catch (err) {
+        showToast(err.message || 'Failed to start practice test.', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
     }
 

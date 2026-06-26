@@ -16,6 +16,7 @@
     <nav class="sidebar-nav">
       <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
       <a href="courses.html"      class="nav-item active"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="materials.html"    class="nav-item"><span class="nav-icon">📂</span><span>Materials</span></a>
       <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
       <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
       <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
@@ -66,8 +67,15 @@
     <form id="section-form" style="margin-top:1.5rem">
       <input type="hidden" id="s-course-id"/>
       <input type="hidden" id="s-id"/>
-      <div class="form-group"><label class="form-label">Section Title *</label><input type="text" id="s-title" class="form-input" placeholder="e.g. Reading" required/></div>
-      <div class="form-group"><label class="form-label">Order</label><input type="number" id="s-order" class="form-input" value="1" min="1"/></div>
+      <div class="form-group">
+        <label class="form-label">Section Category *</label>
+        <select id="s-title" class="form-input" required>
+          <option value="Reading">Reading</option>
+          <option value="Listening">Listening</option>
+          <option value="Speaking">Speaking</option>
+          <option value="Writing">Writing</option>
+        </select>
+      </div>
       <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
         <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('section-modal')">Cancel</button>
         <button type="submit" class="btn btn-primary" style="flex:1">Save Section</button>
@@ -117,7 +125,29 @@ const token = localStorage.getItem('token');
 const user  = JSON.parse(localStorage.getItem('user') || '{}');
 if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
 
+const allowedTaskTypes = {
+  'Reading': [
+    { value: 'COMPLETE_WORDS', label: 'Complete the Words' },
+    { value: 'MCQ', label: 'Read in Daily Life (MCQ)' },
+    { value: 'ACADEMIC_PASSAGE', label: 'Academic Passage' }
+  ],
+  'Listening': [
+    { value: 'SHORT_LISTENING', label: 'Short Listening / Announcement' },
+    { value: 'CONVERSATION', label: 'Conversation / Academic Talk' }
+  ],
+  'Writing': [
+    { value: 'BUILD_SENTENCE', label: 'Build a Sentence (Drag & Drop)' },
+    { value: 'WRITE_EMAIL', label: 'Write an Email' },
+    { value: 'ACADEMIC_DISCUSSION', label: 'Academic Discussion' }
+  ],
+  'Speaking': [
+    { value: 'REPEAT', label: 'Listen and Repeat' },
+    { value: 'INTERVIEW', label: 'Take an Interview' }
+  ]
+};
+
 let editCourseId = null;
+let activeSectionTitle = '';
 
 // ── Helpers ──────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add('active'); }
@@ -220,7 +250,7 @@ async function loadSections(courseId) {
           <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
             <span style="color:var(--text-primary);font-size:0.9rem;font-weight:500">${s.section_order}. ${s.title}</span>
             <div style="display:flex;gap:0.4rem">
-              <button class="btn btn-ghost btn-sm" onclick="loadTasks('${s.id}','${s.id}')">Tasks ▾</button>
+              <button class="btn btn-ghost btn-sm" onclick="loadTasks('${s.id}','${s.id}','${s.title.replace(/'/g, "\\'")}')">Tasks ▾</button>
               <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="deleteSection('${s.id}','${courseId}')">✕</button>
             </div>
           </div>
@@ -232,15 +262,20 @@ async function loadSections(courseId) {
 function openAddSection(courseId) {
   document.getElementById('s-course-id').value = courseId;
   document.getElementById('s-id').value = '';
-  document.getElementById('s-title').value = '';
-  document.getElementById('s-order').value = '1';
+  document.getElementById('s-title').value = 'Reading';
   openModal('section-modal');
 }
 
 document.getElementById('section-form').onsubmit = async (e) => {
   e.preventDefault();
   const courseId = document.getElementById('s-course-id').value;
-  const body = { course_id: courseId, title: document.getElementById('s-title').value, section_order: parseInt(document.getElementById('s-order').value) };
+  const title = document.getElementById('s-title').value;
+  let section_order = 1;
+  if (title === 'Listening') section_order = 2;
+  else if (title === 'Speaking') section_order = 3;
+  else if (title === 'Writing') section_order = 4;
+
+  const body = { course_id: courseId, title, section_order };
   try {
     await api.post('/admin/sections', body);
     closeModal('section-modal');
@@ -255,7 +290,9 @@ async function deleteSection(id, courseId) {
 }
 
 // ── Tasks ─────────────────────────────────────
-async function loadTasks(sectionId, panelId) {
+async function loadTasks(sectionId, panelId, sectionTitle) {
+  if (sectionTitle) activeSectionTitle = sectionTitle;
+  else sectionTitle = activeSectionTitle;
   const panel = document.getElementById(`tasks-${panelId}`);
   if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
   panel.style.display = '';
@@ -266,23 +303,43 @@ async function loadTasks(sectionId, panelId) {
     panel.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
         <span style="color:var(--text-muted);font-size:0.75rem;font-weight:600">TASKS</span>
-        <button class="btn btn-ghost btn-sm" style="font-size:0.75rem" onclick="openAddTask('${sectionId}')">+ Add Task</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:0.75rem" onclick="openAddTask('${sectionId}','${(sectionTitle || '').replace(/'/g, "\\'")}')">+ Add Task</button>
       </div>
       ${tasks.length ? tasks.map(t => `
         <div style="background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:0.65rem;margin-bottom:0.4rem;display:flex;align-items:center;justify-content:space-between">
           <div><span style="font-size:0.82rem;color:var(--text-secondary)">${t.task_order}. ${t.title}</span> <span class="badge badge-info" style="font-size:0.7rem">${t.task_type}</span></div>
-          <button class="btn btn-ghost btn-sm" style="font-size:0.75rem;color:var(--error)" onclick="deleteTask('${t.id}','${sectionId}')">✕</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:0.75rem;color:var(--error)" onclick="deleteTask('${t.id}','${sectionId}','${(sectionTitle || '').replace(/'/g, "\\'")}')">✕</button>
         </div>`).join('') : '<p style="color:var(--text-muted);font-size:0.8rem">No tasks yet.</p>'}`;
   } catch(e) { panel.innerHTML = '<p style="color:var(--error);font-size:0.8rem">Failed to load tasks.</p>'; }
 }
 
-function openAddTask(sectionId) {
+function openAddTask(sectionId, sectionTitle) {
   document.getElementById('t-section-id').value = sectionId;
   document.getElementById('t-title').value = '';
-  document.getElementById('t-type').value = 'MCQ';
   document.getElementById('t-instructions').value = '';
   document.getElementById('t-time').value = '';
   document.getElementById('t-order').value = '1';
+
+  // Build type dropdown dynamically
+  const typeSelect = document.getElementById('t-type');
+  const options = allowedTaskTypes[sectionTitle] || [
+    { value: 'MCQ', label: 'MCQ (Multiple Choice)' },
+    { value: 'COMPLETE_WORDS', label: 'Complete the Words' },
+    { value: 'ACADEMIC_PASSAGE', label: 'Academic Passage' },
+    { value: 'SHORT_LISTENING', label: 'Short Listening' },
+    { value: 'CONVERSATION', label: 'Conversation' },
+    { value: 'BUILD_SENTENCE', label: 'Build a Sentence' },
+    { value: 'WRITE_EMAIL', label: 'Write an Email' },
+    { value: 'ACADEMIC_DISCUSSION', label: 'Academic Discussion' },
+    { value: 'REPEAT', label: 'Listen and Repeat' },
+    { value: 'INTERVIEW', label: 'Interview' }
+  ];
+
+  typeSelect.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+  if (options.length > 0) {
+    typeSelect.value = options[0].value;
+  }
+
   openModal('task-modal');
 }
 

@@ -49,7 +49,9 @@ const api = (() => {
 
       if (!res.ok) {
         const msg = data.message || data.error || `Request failed (${res.status})`;
-        throw new Error(msg);
+        const err = new Error(msg);
+        err.data = data; // Attach full response data for error details
+        throw err;
       }
       return data;
     } catch (err) {

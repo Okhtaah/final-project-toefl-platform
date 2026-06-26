@@ -141,12 +141,18 @@
 // ─────────────────────────────────────────────
 const token = localStorage.getItem('token');
 const user  = JSON.parse(localStorage.getItem('user') || '{}');
-if (!token || user.role !== 'STUDENT') { window.location.href = '../index.html'; }
+if (!token || user.role !== 'STUDENT') { 
+  window.location.href = '../index.html'; 
+  throw new Error('Redirecting...');
+}
 
 const params   = new URLSearchParams(window.location.search);
 const attemptId = params.get('attemptId');
 const courseId  = params.get('courseId');
-if (!attemptId || !courseId) { window.location.href = 'dashboard.html'; }
+if (!attemptId || !courseId) { 
+  window.location.href = 'dashboard.html'; 
+  throw new Error('Redirecting...');
+}
 
 let course      = null;
 let sections    = [];

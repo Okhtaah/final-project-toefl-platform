@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Materials | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/admin.css"/>
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">🎓</span><span class="brand-name">TOEFL Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"    class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+      <a href="courses.html"      class="nav-item"><span class="nav-icon">📚</span><span>Courses</span></a>
+      <a href="materials.html"    class="nav-item active"><span class="nav-icon">📂</span><span>Materials</span></a>
+      <a href="access-codes.html" class="nav-item"><span class="nav-icon">🔑</span><span>Access Codes</span></a>
+      <a href="messages.html"     class="nav-item"><span class="nav-icon">💬</span><span>Messages</span></a>
+      <a href="submissions.html"  class="nav-item"><span class="nav-icon">📝</span><span>Submissions</span></a>
+      <a href="students.html"     class="nav-item"><span class="nav-icon">👥</span><span>Students</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <h2 class="page-title">Study Materials & PDFs</h2>
+        <p class="page-subtitle">Upload and manage study guides, practice PDFs, and texts for student courses.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openAddMaterialModal()">+ New Material</button>
+    </div>
+
+    <div class="section-card">
+      <div id="materials-table-container">
+        <div class="table-loading">Loading materials...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Material Modal -->
+<div class="modal-overlay" id="material-modal">
+  <div class="modal-box" style="max-width:500px">
+    <h3 class="modal-title" id="material-modal-title">Upload Study Material</h3>
+    <form id="material-form" style="margin-top:1.5rem">
+      <input type="hidden" id="m-id"/>
+      
+      <div class="form-group">
+        <label class="form-label">Material Title *</label>
+        <input type="text" id="m-title" class="form-input" placeholder="e.g. Reading Section Guide" required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Course *</label>
+        <select id="m-course" class="form-input" required>
+          <option value="">Select Course...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Material Type *</label>
+        <select id="m-type" class="form-input" onchange="toggleTypeInputs()" required>
+          <option value="PDF">PDF File</option>
+          <option value="TEXT">Written Text</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="file-upload-group">
+        <label class="form-label">Upload PDF File *</label>
+        <input type="file" id="m-file" class="form-input" accept=".pdf"/>
+      </div>
+
+      <div class="form-group" id="text-content-group" style="display:none">
+        <label class="form-label">Text Content *</label>
+        <textarea id="m-text-content" class="form-input" rows="6" placeholder="Type or paste study text content here..."></textarea>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:0.75rem">
+        <input type="checkbox" id="m-free" style="width:18px;height:18px;accent-color:var(--accent)"/>
+        <label for="m-free" class="form-label" style="margin:0">Free Material (no access code required)</label>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('material-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1" id="material-submit-btn">Save Material</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const user  = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'ADMIN') window.location.href = '../index.html';
+
+let allCourses = [];
+
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function toggleTypeInputs() {
+  const type = document.getElementById('m-type').value;
+  const fileGroup = document.getElementById('file-upload-group');
+  const textGroup = document.getElementById('text-content-group');
+  const fileInput = document.getElementById('m-file');
+  const textInput = document.getElementById('m-text-content');
+
+  if (type === 'PDF') {
+    fileGroup.style.display = '';
+    textGroup.style.display = 'none';
+    fileInput.required = true;
+    textInput.required = false;
+  } else {
+    fileGroup.style.display = 'none';
+    textGroup.style.display = '';
+    fileInput.required = false;
+    textInput.required = true;
+  }
+}
+
+async function loadCourses() {
+  try {
+    const data = await api.get('/admin/courses');
+    allCourses = data.courses || data || [];
+    const select = document.getElementById('m-course');
+    select.innerHTML = '<option value="">Select Course...</option>' + 
+      allCourses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+  } catch (err) {
+    console.error('Failed to load courses:', err);
+  }
+}
+
+async function loadMaterials() {
+  const container = document.getElementById('materials-table-container');
+  try {
+    const data = await api.get('/admin/materials');
+    const materials = data.materials || data || [];
+    
+    if (!materials.length) {
+      container.innerHTML = '<p style="color:var(--text-muted)">No study materials uploaded yet.</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Course</th>
+            <th>Type</th>
+            <th>Access</th>
+            <th>File/Link</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${materials.map(m => `
+            <tr>
+              <td style="font-weight:600">${m.title}</td>
+              <td>${m.course_title || 'General'}</td>
+              <td><span class="badge badge-neutral">${m.material_type}</span></td>
+              <td>
+                <span class="badge ${m.is_free ? 'badge-success' : 'badge-neutral'}">
+                  ${m.is_free ? '🆓 Free' : '🔑 Premium'}
+                </span>
+              </td>
+              <td>
+                <a href="${m.file_url.startsWith('http') ? m.file_url : CONFIG.API_URL.replace('/api', '') + m.file_url}" target="_blank" style="color:var(--accent);text-decoration:underline">
+                  Open File ↗
+                </a>
+              </td>
+              <td>
+                <button class="btn btn-ghost btn-sm" style="color:var(--error)" onclick="deleteMaterial('${m.id}')">Delete</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    container.innerHTML = '<p style="color:var(--error)">Failed to load materials.</p>';
+  }
+}
+
+function openAddMaterialModal() {
+  document.getElementById('material-modal-title').textContent = 'Upload Study Material';
+  document.getElementById('m-id').value = '';
+  document.getElementById('m-title').value = '';
+  document.getElementById('m-course').value = '';
+  document.getElementById('m-type').value = 'PDF';
+  document.getElementById('m-file').value = '';
+  document.getElementById('m-text-content').value = '';
+  document.getElementById('m-free').checked = false;
+  toggleTypeInputs();
+  openModal('material-modal');
+}
+
+document.getElementById('material-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('material-submit-btn');
+  const title = document.getElementById('m-title').value.trim();
+  const courseId = document.getElementById('m-course').value;
+  const materialType = document.getElementById('m-type').value;
+  const isFree = document.getElementById('m-free').checked;
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    let fileUrl = '';
+    if (materialType === 'PDF') {
+      const fileInput = document.getElementById('m-file');
+      if (!fileInput.files.length) {
+        throw new Error('Please select a PDF file to upload.');
+      }
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadRes = await api.upload('/upload', formData);
+      fileUrl = uploadRes.fileUrl;
+    } else {
+      const textVal = document.getElementById('m-text-content').value.trim();
+      const blob = new Blob([textVal], { type: 'text/plain' });
+      const file = new File([blob], `${title.toLowerCase().replace(/\s+/g, '_')}.txt`, { type: 'text/plain' });
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadRes = await api.upload('/upload', formData);
+      fileUrl = uploadRes.fileUrl;
+    }
+
+    const body = {
+      course_id: courseId,
+      title,
+      file_url: fileUrl,
+      material_type: materialType,
+      is_free: isFree
+    };
+
+    await api.post('/admin/materials', body);
+    closeModal('material-modal');
+    loadMaterials();
+  } catch (err) {
+    alert(err.message || 'Failed to save material.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Material';
+  }
+};
+
+async function deleteMaterial(id) {
+  if (!confirm('Are you sure you want to delete this study material?')) return;
+  try {
+    await api.delete(`/admin/materials/${id}`);
+    loadMaterials();
+  } catch (err) {
+    alert('Failed to delete material.');
+  }
+}
+
+// Init
+loadCourses();
+loadMaterials();
+</script>
+</body>
+</html>

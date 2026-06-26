@@ -99,16 +99,31 @@ router.post('/redeem', authenticate, async (req, res) => {
   }
 });
 
-// ============================================
 // GET /api/access-codes — Admin list all codes
-// ============================================
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, code, target_type, target_id, max_uses, current_uses, expires_at, created_at
        FROM AccessCodes ORDER BY created_at DESC`
     );
-    res.json({ codes: result.rows });
+
+    const codes = [];
+    for (const code of result.rows) {
+      const usageResult = await pool.query(
+        `SELECT ua.unlocked_at, u.full_name, u.email
+         FROM UserAccess ua
+         JOIN Users u ON ua.user_id = u.id
+         WHERE ua.access_code_id = $1
+         ORDER BY ua.unlocked_at DESC`,
+        [code.id]
+      );
+      codes.push({
+        ...code,
+        users: usageResult.rows
+      });
+    }
+
+    res.json({ codes });
   } catch (err) {
     console.error('List access codes error:', err);
     res.status(500).json({ error: 'Failed to retrieve access codes.' });
